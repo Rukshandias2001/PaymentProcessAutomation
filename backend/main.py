@@ -136,6 +136,7 @@ def get_invoices(
         )
         query = query.filter(search_filter)
         
+    query = query.order_by(models.VendorInvoice.itd_no.desc())
     total = query.count()
     total_pages = math.ceil(total / size) if total > 0 else 1
     skip = (page - 1) * size
