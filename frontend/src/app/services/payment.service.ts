@@ -25,6 +25,7 @@ export interface Invoice {
   account_id?: number;
   account_number?: string;
   account_type?: string;
+  invoice_number?: string;
 }
 
 export interface CostCenter {

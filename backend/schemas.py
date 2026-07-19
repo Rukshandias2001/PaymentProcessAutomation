@@ -24,6 +24,7 @@ class VendorInvoiceBase(BaseModel):
     account_id: Optional[int] = None
     account_number: Optional[str] = None
     account_type: Optional[str] = None
+    invoice_number: Optional[str] = None
 
 class CostCenterResponse(BaseModel):
     cost_center_id: int

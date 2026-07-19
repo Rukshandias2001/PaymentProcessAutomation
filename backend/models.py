@@ -20,6 +20,7 @@ class VendorInvoice(Base):
     total_goods = Column(Integer, nullable=True)
     purchased_goods = Column(Integer, nullable=True)
     vender_details = Column(Text)
+    invoice_number = Column(String(100), unique=True, nullable=True)
     
     # Extra columns already present in the database table
     cost_center_id = Column(Integer, nullable=True)

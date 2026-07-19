@@ -49,7 +49,8 @@ export class InvoiceFormComponent implements OnInit {
     purchased_goods: 0,
     total_po_quantity: 0,
     delivered_quantity: 0,
-    vender_details: ''
+    vender_details: '',
+    invoice_number: ''
   };
 
   constructor(
@@ -122,6 +123,7 @@ export class InvoiceFormComponent implements OnInit {
           account_id: data.account_id,
           account_number: data.account_number,
           account_type: data.account_type,
+          invoice_number: data.invoice_number || ''
         };
         this.retrofitLegacyFields();
         this.loading = false;

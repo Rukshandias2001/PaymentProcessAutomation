@@ -303,6 +303,19 @@ def create_invoice(
                     detail=f"Cannot create invoice: purchased_goods of {current_purchased} items exceeds PO '{po_num}' total_goods limit of {max_goods} items ({previously_purchased} purchased previously + {current_purchased} requested = {previously_purchased + current_purchased} > {max_goods})."
                 )
     
+    # Ensure invoice_number is unique
+    if invoice_data.get("invoice_number"):
+        inv_num = invoice_data["invoice_number"].strip()
+        if inv_num:
+            existing_num = db.query(models.VendorInvoice).filter(
+                models.VendorInvoice.invoice_number == inv_num
+            ).first()
+            if existing_num:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"An invoice with Invoice Number '{inv_num}' already exists in the system."
+                )
+
     # Auto-generate itd_no if omitted or empty
     if not invoice_data.get("itd_no"):
         invoice_data["itd_no"] = get_next_itd_no(db)

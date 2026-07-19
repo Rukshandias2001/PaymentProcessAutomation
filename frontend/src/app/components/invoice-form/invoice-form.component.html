@@ -48,6 +48,24 @@
         >
       </div>
 
+      <!-- Invoice Number -->
+      <div>
+        <label for="invoice_number">Invoice Number <span style="color: var(--danger-color);">*</span></label>
+        <input 
+          type="text" 
+          id="invoice_number" 
+          name="invoice_number" 
+          [(ngModel)]="invoice.invoice_number" 
+          required
+          #invNumInput="ngModel"
+          [disabled]="isEditMode"
+          placeholder="e.g., INV-1004"
+        >
+        <div *ngIf="invNumInput.invalid && invNumInput.touched" style="color: var(--danger-color); font-size: 12px; margin-top: 4px;">
+          Invoice Number is required.
+        </div>
+      </div>
+
       <!-- Vendor Name -->
       <div>
         <label for="vendor_names">Vendor Name <span style="color: var(--danger-color);">*</span></label>
