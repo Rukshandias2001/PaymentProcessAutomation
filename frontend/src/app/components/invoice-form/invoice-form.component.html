@@ -248,19 +248,7 @@
         >
       </div>
 
-      <!-- Account Type Category - Non-Purchases Only -->
-      <div *ngIf="isNonPurchasePaymentType()" style="grid-column: span 2;">
-        <label for="account_type_display">Account Type Category <span style="color: var(--cyan-color); font-size: 11px;">(Read-only)</span></label>
-        <input 
-          type="text" 
-          id="account_type_display" 
-          name="account_type_display" 
-          [ngModel]="invoice.account_type"
-          disabled
-          placeholder="Select account type to load category..."
-          style="font-weight: 600;"
-        >
-      </div>
+
 
       <!-- GRN Number - Purchases Only -->
       <div *ngIf="isPurchasePaymentType()">
