@@ -1,0 +1,319 @@
+<div class="page-header">
+  <div>
+    <h2 class="page-title">{{ isCreateMode ? 'Draft Payment Certificate' : 'Payment Certificate: ' + certificate?.certificate_no }}</h2>
+    <p class="page-subtitle">{{ isCreateMode ? 'Configure certified valuation amounts referencing Invoice: ' + invoice?.itd_no : 'Inspect sequential sign-offs and transaction coordinates' }}</p>
+  </div>
+  <div>
+    <a routerLink="/certificates" class="btn btn-secondary">
+      <span>⬅️</span> Back to Directory
+    </a>
+  </div>
+</div>
+
+<!-- Errors Alert -->
+<div *ngIf="error" class="error-message">
+  ⚠️ {{ error }}
+</div>
+
+<!-- Loading Spinner -->
+<div *ngIf="loading && !error" class="glass-panel loader-container">
+  <div class="spinner"></div>
+  <p style="color: var(--text-secondary); margin-left: 12px;">Structuring certificate coordinates...</p>
+</div>
+
+<!-- Main Workspace -->
+<div *ngIf="!loading && !error" class="detail-grid">
+  <!-- Left Column: Document mock representation -->
+  <div class="glass-panel cert-document">
+    <!-- Visual Stamps for Approved/Rejected -->
+    <div *ngIf="certificate?.status === 'Fully Approved'" class="doc-stamp stamp-approved">
+      Approved
+    </div>
+    <div *ngIf="certificate?.status === 'Rejected'" class="doc-stamp stamp-rejected">
+      Rejected
+    </div>
+
+    <!-- Header layout -->
+    <div class="cert-header">
+      <div class="cert-title-area">
+        <h3>PAYMENT CERTIFICATE</h3>
+        <p style="color: var(--text-secondary); font-size: 13px; margin-top: 4px;">SYSTEM GENERATED DOCUMENT</p>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-weight: 700; font-size: 16px; color: var(--cyan-color);">
+          {{ isCreateMode ? 'PC-DRAFT' : certificate?.certificate_no }}
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          Date: {{ (isCreateMode ? todayDate : certificate?.created_at) | date:'yyyy-MM-dd HH:mm' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Invoice Details mapping -->
+    <div class="doc-section-title">Reference Invoice Details</div>
+    <div class="glass-panel" style="background: rgba(255, 255, 255, 0.01); margin-bottom: 24px; padding: 16px;">
+      <div class="data-row">
+        <span class="data-label">Invoice ITD Number</span>
+        <span class="data-value" style="color: var(--cyan-color);">{{ isCreateMode ? invoice?.itd_no : certificate?.invoice?.itd_no }}</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Vendor Name</span>
+        <span class="data-value">{{ isCreateMode ? invoice?.vendor_names : certificate?.invoice?.vendor_names }}</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Vendor Contact Info</span>
+        <span class="data-value">{{ isCreateMode ? invoice?.vender_details : certificate?.invoice?.vender_details }}</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Cost Center Code</span>
+        <span class="data-value" style="font-family: monospace;">{{ isCreateMode ? invoice?.cost_center : certificate?.invoice?.cost_center }}</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">GRN reference</span>
+        <span class="data-value">{{ isCreateMode ? invoice?.grn_number : certificate?.invoice?.grn_number }}</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Purchase Order</span>
+        <span class="data-value">{{ isCreateMode ? invoice?.po_number : certificate?.invoice?.po_number }}</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Invoice Description</span>
+        <span class="data-value" style="font-weight: normal; max-width: 400px; text-align: right;">{{ isCreateMode ? invoice?.description : certificate?.invoice?.description }}</span>
+      </div>
+    </div>
+
+    <!-- Certified Valuation Box -->
+    <div class="doc-section-title">Certified Valuation Summary</div>
+    <div class="glass-panel" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2); text-align: center; padding: 30px; margin-bottom: 24px;">
+      <div style="color: var(--text-secondary); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+        Approved Certified Net Amount for Payment
+      </div>
+      <div style="font-size: 40px; font-weight: 800; color: var(--success-color); font-family: monospace;">
+        ${{ (isCreateMode ? amount_certified : certificate?.amount_certified) | number:'1.2-2' }}
+      </div>
+    </div>
+
+    <!-- Historical Comments Log -->
+    <div *ngIf="!isCreateMode && certificate?.remarks" class="remarks-log">
+      <div class="remarks-header">Approval Audit Log</div>
+      <div class="remarks-text">{{ certificate?.remarks }}</div>
+    </div>
+  </div>
+
+  <!-- Right Column: Timeline trackers & approvals controls -->
+  <div>
+    <!-- IF CREATE MODE -->
+    <div *ngIf="isCreateMode" class="glass-panel">
+      <h3 style="margin-bottom: 20px; font-weight: 700;">Certificate Configuration</h3>
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Certified Amount input -->
+        <div>
+          <label for="amount_certified">Certified Net Amount ($) <span style="color: var(--danger-color);">*</span></label>
+          <input 
+            type="number" 
+            id="amount_certified" 
+            [(ngModel)]="amount_certified" 
+            min="0.01" 
+            step="0.01" 
+            placeholder="0.00"
+          >
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Specify the net amount authorized for this billing certificate</p>
+        </div>
+
+        <!-- Remarks input -->
+        <div>
+          <label for="remarks">Initial Certificate Notes</label>
+          <textarea 
+            id="remarks" 
+            [(ngModel)]="remarks" 
+            rows="3" 
+            placeholder="Add initial notes or certification scope description..."
+          ></textarea>
+        </div>
+
+        <!-- Submit btn -->
+        <button 
+          class="btn btn-primary" 
+          (click)="createCertificate()" 
+          [disabled]="amount_certified <= 0 || submitting"
+          style="width: 100%; margin-top: 10px;"
+        >
+          <span *ngIf="submitting" class="spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>
+          Initialize Workflow
+        </button>
+      </div>
+    </div>
+
+    <!-- IF VIEW MODE -->
+    <div *ngIf="!isCreateMode && certificate" style="display: flex; flex-direction: column; gap: 24px;">
+      <!-- Timeline progress card -->
+      <div class="glass-panel timeline-card">
+        <h3 style="font-weight: 700; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 10px;">Approval Progress</h3>
+        
+        <div class="timeline">
+          <!-- Gate 1: PM -->
+          <div 
+            class="timeline-item" 
+            [class.approved]="certificate.approver1_status === 'Approved'"
+            [class.rejected]="certificate.approver1_status === 'Rejected'"
+            [class.active]="certificate.status === 'Pending PM Approval'"
+            [class.pending]="certificate.approver1_status === 'Pending' && certificate.status !== 'Pending PM Approval'"
+          >
+            <div class="timeline-dot"></div>
+            <div class="timeline-info">
+              <span class="timeline-role">{{ certificate.approver1_name }}</span>
+              <span class="timeline-status">
+                Status: <strong>{{ certificate.approver1_status }}</strong>
+              </span>
+              <span *ngIf="certificate.approver1_date" class="timeline-date">
+                {{ certificate.approver1_date | date:'yyyy-MM-dd HH:mm' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Gate 2: TL -->
+          <div 
+            class="timeline-item"
+            [class.approved]="certificate.approver2_status === 'Approved'"
+            [class.rejected]="certificate.approver2_status === 'Rejected'"
+            [class.active]="certificate.status === 'Pending TL Approval'"
+            [class.pending]="certificate.approver2_status === 'Pending' && certificate.status !== 'Pending TL Approval'"
+          >
+            <div class="timeline-dot"></div>
+            <div class="timeline-info">
+              <span class="timeline-role">{{ certificate.approver2_name }}</span>
+              <span class="timeline-status">
+                Status: <strong>{{ certificate.approver2_status }}</strong>
+              </span>
+              <span *ngIf="certificate.approver2_date" class="timeline-date">
+                {{ certificate.approver2_date | date:'yyyy-MM-dd HH:mm' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Gate 3: FC -->
+          <div 
+            class="timeline-item"
+            [class.approved]="certificate.approver3_status === 'Approved'"
+            [class.rejected]="certificate.approver3_status === 'Rejected'"
+            [class.active]="certificate.status === 'Pending FC Approval'"
+            [class.pending]="certificate.approver3_status === 'Pending' && certificate.status !== 'Pending FC Approval'"
+          >
+            <div class="timeline-dot"></div>
+            <div class="timeline-info">
+              <span class="timeline-role">{{ certificate.approver3_name }}</span>
+              <span class="timeline-status">
+                Status: <strong>{{ certificate.approver3_status }}</strong>
+              </span>
+              <span *ngIf="certificate.approver3_date" class="timeline-date">
+                {{ certificate.approver3_date | date:'yyyy-MM-dd HH:mm' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Gate 4: FD -->
+          <div 
+            class="timeline-item"
+            [class.approved]="certificate.approver4_status === 'Approved'"
+            [class.rejected]="certificate.approver4_status === 'Rejected'"
+            [class.active]="certificate.status === 'Pending FD Approval'"
+            [class.pending]="certificate.approver4_status === 'Pending' && certificate.status !== 'Pending FD Approval'"
+          >
+            <div class="timeline-dot"></div>
+            <div class="timeline-info">
+              <span class="timeline-role">{{ certificate.approver4_name }}</span>
+              <span class="timeline-status">
+                Status: <strong>{{ certificate.approver4_status }}</strong>
+              </span>
+              <span *ngIf="certificate.approver4_date" class="timeline-date">
+                {{ certificate.approver4_date | date:'yyyy-MM-dd HH:mm' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Panel depending on state and active simulated role -->
+      <div class="glass-panel">
+        <h3 style="margin-bottom: 16px; font-weight: 700;">Workflow Sign-Off</h3>
+        
+        <!-- Active simulated role notice -->
+        <div class="simulation-alert">
+          👤 Simulating: <strong>{{ simService.currentRole() }}</strong>
+          <span style="font-size: 12px; display: block; margin-top: 4px; color: var(--text-secondary);">
+            To sign off as another approver, use the <strong>Approver Simulator</strong> toggles in the sidebar.
+          </span>
+        </div>
+
+        <!-- 1. Simulated role CAN approve the current gate -->
+        <div *ngIf="canApprove()">
+          <p style="margin-bottom: 12px; font-size: 14px; color: var(--text-primary);">
+            You have authorization as the <strong>{{ getCurrentRequiredRoleLabel() }}</strong> to sign off this certificate.
+          </p>
+          
+          <div style="margin-bottom: 16px;">
+            <label for="approval_remarks">Sign-Off Comments</label>
+            <textarea 
+              id="approval_remarks" 
+              [(ngModel)]="approval_remarks" 
+              rows="3" 
+              placeholder="Provide comments, reasons, or verification notes..."
+            ></textarea>
+          </div>
+
+          <div style="display: flex; gap: 12px;">
+            <button 
+              class="btn btn-success" 
+              (click)="submitApproval('approve')" 
+              [disabled]="submitting"
+              style="flex: 1;"
+            >
+              Approve & Sign
+            </button>
+            <button 
+              class="btn btn-danger" 
+              (click)="submitApproval('reject')" 
+              [disabled]="submitting"
+              style="flex: 1;"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Certificate is still pending but simulated role is NOT the required role -->
+        <div *ngIf="!canApprove() && certificate.status.startsWith('Pending')">
+          <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.15); padding: 14px; border-radius: var(--border-radius-sm); text-align: center;">
+            <div style="font-size: 20px; margin-bottom: 6px;">⏳</div>
+            <div style="font-size: 13px; color: var(--text-secondary);">Awaiting Sign-off From</div>
+            <div style="font-weight: 700; color: var(--warning-color); font-size: 15px; margin-top: 2px;">
+              {{ getCurrentRequiredRoleLabel() }}
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">
+              Toggle to the correct role using the Approver Simulator in the sidebar to simulate their sign-off actions.
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Fully Approved or Rejected -->
+        <div *ngIf="certificate.status === 'Fully Approved' || certificate.status === 'Rejected'">
+          <div 
+            [style.background]="certificate.status === 'Fully Approved' ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)'"
+            [style.border-color]="certificate.status === 'Fully Approved' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'"
+            style="border: 1px solid; padding: 16px; border-radius: var(--border-radius-sm); text-align: center;"
+          >
+            <div style="font-size: 24px; margin-bottom: 6px;">
+              {{ certificate.status === 'Fully Approved' ? '✅' : '❌' }}
+            </div>
+            <div style="font-weight: 800; font-size: 16px;" [style.color]="certificate.status === 'Fully Approved' ? 'var(--success-color)' : 'var(--danger-color)'">
+              Workflow {{ certificate.status === 'Fully Approved' ? 'Completed' : 'Terminated' }}
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.4;">
+              This payment certificate has been final-processed and is now <strong>{{ certificate.status }}</strong>. No further modifications can be made.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

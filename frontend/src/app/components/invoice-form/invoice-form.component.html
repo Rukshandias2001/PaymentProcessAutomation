@@ -1,0 +1,569 @@
+<div class="page-header">
+  <div>
+    <h2 class="page-title">{{ isEditMode ? 'View Invoice Details & Update Status' : 'Register New Invoice' }}</h2>
+    <p class="page-subtitle">{{ isEditMode ? 'Inspect complete invoice records & adjust payment status for ITD No: ' + invoice.itd_no : 'Introduce a new vendor billing entry into the system' }}</p>
+  </div>
+  <div>
+    <a routerLink="/invoices" class="btn btn-secondary">
+      <span>⬅️</span> Back to list
+    </a>
+  </div>
+</div>
+
+<!-- Errors Alert -->
+<div *ngIf="error" class="error-message">
+  ⚠️ {{ error }}
+</div>
+
+<!-- PO Over Quantity Limit Error Alert -->
+<div *ngIf="poOverLimitError" class="error-message" style="background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger-color); color: #f87171; margin-bottom: 24px; padding: 16px;">
+  {{ poOverLimitError }}
+</div>
+
+<!-- Edit / View Mode Notice -->
+<div *ngIf="isEditMode && !loading" class="glass-panel" style="background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.2); margin-bottom: 24px; padding: 16px;">
+  ℹ️ <strong>View Mode Active:</strong> Displaying all invoice details for ITD No <strong>{{ invoice.itd_no }}</strong>. The <strong>Status</strong> dropdown remains editable for status adjustments.
+</div>
+
+<!-- Loading Spinner -->
+<div *ngIf="loading" class="glass-panel loader-container">
+  <div class="spinner"></div>
+</div>
+
+<!-- Invoice Form Panel -->
+<div *ngIf="!loading" class="glass-panel">
+  <form (ngSubmit)="onSubmit()" #invoiceForm="ngForm">
+    <div class="form-grid">
+      <!-- ITD Number -->
+      <div>
+        <label for="itd_no">ITD Number <span style="color: var(--cyan-color); font-size: 12px;">(Auto-generated)</span></label>
+        <input 
+          type="text" 
+          id="itd_no" 
+          name="itd_no" 
+          [(ngModel)]="invoice.itd_no" 
+          disabled
+          placeholder="Auto-assigning next ITD..."
+          style="font-weight: 700; color: var(--cyan-color);"
+        >
+      </div>
+
+      <!-- Vendor Name -->
+      <div>
+        <label for="vendor_names">Vendor Name <span style="color: var(--danger-color);">*</span></label>
+        <input 
+          type="text" 
+          id="vendor_names" 
+          name="vendor_names" 
+          [(ngModel)]="invoice.vendor_names" 
+          required
+          #vendorInput="ngModel"
+          [disabled]="isEditMode"
+          placeholder="e.g., Vendor A"
+        >
+        <div *ngIf="vendorInput.invalid && vendorInput.touched" style="color: var(--danger-color); font-size: 12px; margin-top: 4px;">
+          Vendor Name is required.
+        </div>
+      </div>
+
+      <!-- Payment Type Dropdown -->
+      <div>
+        <label for="payment_type">Payment Type <span style="color: var(--cyan-color); font-size: 12px;">(Select category)</span></label>
+        <select 
+          id="payment_type" 
+          name="payment_type" 
+          [(ngModel)]="invoice.payment_type"
+          (change)="onPoNumberOrQtyChange()"
+          [disabled]="isEditMode"
+        >
+          <option value="">Select Payment Type...</option>
+          <option value="Computer Equipment Purchases">Computer Equipment Purchases</option>
+          <option value="Computer Software Purchases">Computer Software Purchases</option>
+          <option value="Software Subscriptions (Monthly)">Software Subscriptions (Monthly)</option>
+          <option value="Software Subscriptions (Annual)">Software Subscriptions (Annual)</option>
+          <option value="Service & Maintenance">Service & Maintenance</option>
+          <option value="Foreign Payments">Foreign Payments</option>
+          <option value="Hardware Purchases">Hardware Purchases</option>
+          <option value="Software Purchases">Software Purchases</option>
+          <option value="Partial Equipment / PO Delivery">Partial Equipment / PO Delivery</option>
+        </select>
+      </div>
+
+      <!-- Invoice Price -->
+      <div>
+        <label for="price">Invoice Price / Amount ($) <span style="color: var(--success-color);">*</span></label>
+        <input 
+          type="number" 
+          id="price" 
+          name="price" 
+          [(ngModel)]="invoice.price"
+          step="0.01"
+          min="0"
+          [disabled]="isEditMode"
+          placeholder="e.g., 5600.00"
+          style="font-family: monospace; font-weight: 700; color: var(--success-color);"
+        >
+      </div>
+
+      <!-- PO Number -->
+      <div>
+        <label for="po_number">PO Number</label>
+        <input 
+          type="text" 
+          id="po_number" 
+          name="po_number" 
+          [(ngModel)]="invoice.po_number"
+          (input)="onPoNumberOrQtyChange()"
+          [disabled]="isEditMode"
+          placeholder="e.g., PO-8001"
+        >
+      </div>
+
+      <!-- Partial Equipment / PO Delivery Quantity Inputs -->
+      <ng-container *ngIf="invoice.payment_type === 'Partial Equipment / PO Delivery'">
+        <div>
+          <label for="total_goods">total_goods (Total Items) <span style="color: var(--warning-color);">*</span></label>
+          <input 
+            type="number" 
+            id="total_goods" 
+            name="total_goods" 
+            [(ngModel)]="invoice.total_goods"
+            (input)="onPoNumberOrQtyChange()"
+            min="1"
+            [disabled]="isEditMode"
+            placeholder="Total items in PO (e.g. 117)"
+            style="font-weight: 700;"
+          >
+        </div>
+
+        <div>
+          <label for="purchased_goods">purchased_goods (Items Billed) <span style="color: var(--warning-color);">*</span></label>
+          <input 
+            type="number" 
+            id="purchased_goods" 
+            name="purchased_goods" 
+            [(ngModel)]="invoice.purchased_goods"
+            (input)="onPoNumberOrQtyChange()"
+            min="1"
+            [disabled]="isEditMode"
+            placeholder="Items in this purchase (e.g. 56)"
+            style="font-weight: 700; color: var(--warning-color);"
+          >
+        </div>
+      </ng-container>
+
+      <!-- Took Date -->
+      <div>
+        <label for="invoice_took_date">Invoice Took Date</label>
+        <input 
+          type="date" 
+          id="invoice_took_date" 
+          name="invoice_took_date" 
+          [(ngModel)]="invoice.invoice_took_date"
+          [disabled]="isEditMode"
+        >
+      </div>
+
+      <!-- Sent Date -->
+      <div>
+        <label for="invoice_sent">Invoice Sent Date</label>
+        <input 
+          type="date" 
+          id="invoice_sent" 
+          name="invoice_sent" 
+          [(ngModel)]="invoice.invoice_sent"
+          [disabled]="isEditMode"
+        >
+      </div>
+
+      <!-- Location (Cost Center Name) - Non-Purchases Only -->
+      <div *ngIf="isNonPurchasePaymentType()">
+        <label for="cost_center_id">Location (Cost Center Name) <span style="color: var(--danger-color);">*</span></label>
+        <select 
+          id="cost_center_id" 
+          name="cost_center_id" 
+          [(ngModel)]="invoice.cost_center_id"
+          (change)="onCostCenterSelected()"
+          [disabled]="isEditMode"
+          required
+          #ccInput="ngModel"
+        >
+          <option value="">Select Location...</option>
+          <option *ngFor="let cc of costCenters" [value]="cc.cost_center_id">
+            {{ cc.cost_center_name }}
+          </option>
+        </select>
+        <div *ngIf="ccInput.invalid && ccInput.touched" style="color: var(--danger-color); font-size: 12px; margin-top: 4px;">
+          Location is required.
+        </div>
+      </div>
+
+      <!-- Cost Center Code - Non-Purchases Only -->
+      <div *ngIf="isNonPurchasePaymentType()">
+        <label for="cost_center_display">Cost Center Code <span style="color: var(--cyan-color); font-size: 11px;">(Read-only)</span></label>
+        <input 
+          type="text" 
+          id="cost_center_display" 
+          name="cost_center_display" 
+          [ngModel]="invoice.cost_center"
+          disabled
+          placeholder="Select location to load code..."
+          style="font-weight: 700; color: var(--cyan-color);"
+        >
+      </div>
+
+      <!-- Account Type Dropdown - Non-Purchases Only -->
+      <div *ngIf="isNonPurchasePaymentType()">
+        <label for="account_id">Account Type <span style="color: var(--danger-color);">*</span></label>
+        <select 
+          id="account_id" 
+          name="account_id" 
+          [(ngModel)]="invoice.account_id"
+          (change)="onAccountSelected()"
+          [disabled]="isEditMode"
+          required
+          #accInput="ngModel"
+        >
+          <option value="">Select Account Type...</option>
+          <option *ngFor="let acc of accounts" [value]="acc.account_id">
+            {{ acc.account_name }}
+          </option>
+        </select>
+        <div *ngIf="accInput.invalid && accInput.touched" style="color: var(--danger-color); font-size: 12px; margin-top: 4px;">
+          Account Type selection is required.
+        </div>
+      </div>
+
+      <!-- Account Number - Non-Purchases Only -->
+      <div *ngIf="isNonPurchasePaymentType()">
+        <label for="account_number">Account Number <span style="color: var(--cyan-color); font-size: 11px;">(Read-only)</span></label>
+        <input 
+          type="text" 
+          id="account_number" 
+          name="account_number" 
+          [ngModel]="invoice.account_number"
+          disabled
+          placeholder="Select account type to load number..."
+          style="font-family: monospace; font-weight: 700; color: var(--cyan-color);"
+        >
+      </div>
+
+      <!-- Account Type Category - Non-Purchases Only -->
+      <div *ngIf="isNonPurchasePaymentType()" style="grid-column: span 2;">
+        <label for="account_type_display">Account Type Category <span style="color: var(--cyan-color); font-size: 11px;">(Read-only)</span></label>
+        <input 
+          type="text" 
+          id="account_type_display" 
+          name="account_type_display" 
+          [ngModel]="invoice.account_type"
+          disabled
+          placeholder="Select account type to load category..."
+          style="font-weight: 600;"
+        >
+      </div>
+
+      <!-- GRN Number - Purchases Only -->
+      <div *ngIf="isPurchasePaymentType()">
+        <label for="grn_number">GRN Number <span style="color: var(--danger-color);">*</span></label>
+        <input 
+          type="text" 
+          id="grn_number" 
+          name="grn_number" 
+          [(ngModel)]="invoice.grn_number"
+          [disabled]="isEditMode"
+          required
+          #grnInput="ngModel"
+          placeholder="e.g., GRN-5001"
+        >
+        <div *ngIf="grnInput.invalid && grnInput.touched" style="color: var(--danger-color); font-size: 12px; margin-top: 4px;">
+          GRN Number is required.
+        </div>
+      </div>
+
+      <!-- Status (Editable in both modes) -->
+      <div>
+        <label for="status">Status <span style="color: var(--cyan-color); font-size: 12px;">(Editable)</span></label>
+        <select 
+          id="status" 
+          name="status" 
+          [(ngModel)]="invoice.status"
+          style="font-weight: 700;"
+          [class.badge-pending]="invoice.status === 'Pending'"
+          [class.badge-approved]="invoice.status === 'Approved'"
+          [class.badge-paid]="invoice.status === 'Paid'"
+          [class.badge-cancelled]="invoice.status === 'Cancelled'"
+        >
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Paid">Paid</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group-full">
+        <label for="description">Billing Description</label>
+        <textarea 
+          id="description" 
+          name="description" 
+          [(ngModel)]="invoice.description" 
+          rows="3"
+          [disabled]="isEditMode"
+          placeholder="Detailed billing description of services rendered or goods supplied..."
+        ></textarea>
+      </div>
+
+      <!-- Vendor Details -->
+      <div class="form-group-full">
+        <label for="vender_details">Vendor Contact details</label>
+        <input 
+          type="text" 
+          id="vender_details" 
+          name="vender_details" 
+          [(ngModel)]="invoice.vender_details"
+          [disabled]="isEditMode"
+          placeholder="Contact Info: email, phone, billing address..."
+        >
+      </div>
+    </div>
+
+    <!-- Partial Equipment / PO Delivery Breakdown Table Section -->
+    <div *ngIf="poSummary && poSummary.invoices && poSummary.invoices.length > 0" class="form-group-full" style="margin-top: 24px; padding: 20px; background: rgba(17, 24, 39, 0.8); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+        <h4 style="color: var(--cyan-color); font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; margin: 0;">
+          <span>📦</span> Partial Delivery Breakdown for PO: {{ poSummary.po_number }}
+        </h4>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <button 
+            type="button"
+            class="btn btn-success btn-sm"
+            (click)="exportPartialDeliveryExcel()"
+            [disabled]="exportingPoExcel"
+            style="font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);"
+          >
+            <span>📊</span> Export Partial Delivery Excel
+          </button>
+          <span class="badge" [class.badge-paid]="poSummary.is_completed" [class.badge-pending]="!poSummary.is_completed">
+            {{ poSummary.total_delivered_quantity }} / {{ poSummary.total_po_quantity }} Items Delivered
+          </span>
+        </div>
+      </div>
+
+      <!-- Cumulative Progress Bar -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">
+          <span>Cumulative Delivery Progress</span>
+          <span><strong>{{ poSummary.total_delivered_quantity }}</strong> of <strong>{{ poSummary.total_po_quantity }}</strong> items (Remaining: {{ poSummary.remaining_quantity }})</span>
+        </div>
+        <div style="background: rgba(0, 0, 0, 0.4); height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid var(--glass-border);">
+          <div 
+            [style.width.%]="poSummary.total_po_quantity ? (poSummary.total_delivered_quantity / poSummary.total_po_quantity) * 100 : 0"
+            [style.background]="poSummary.is_completed ? 'var(--success-color)' : 'var(--warning-color)'"
+            style="height: 100%; transition: width 0.5s ease;"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Breakdown Table -->
+      <div class="table-container" style="background: rgba(0, 0, 0, 0.2);">
+        <table>
+          <thead>
+            <tr>
+              <th>ITD Number</th>
+              <th>Vendor Name</th>
+              <th>purchased_goods</th>
+              <th>total_goods</th>
+              <th>Invoice Price ($)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of poSummary.invoices">
+              <td style="font-weight: 700; color: var(--cyan-color);">{{ item.itd_no }}</td>
+              <td>{{ item.vendor_names }}</td>
+              <td style="font-weight: 700; color: var(--warning-color);">{{ item.purchased_goods || item.delivered_quantity || '-' }} items</td>
+              <td>{{ item.total_goods || item.total_po_quantity || '-' }} items</td>
+              <td style="font-family: monospace; font-weight: 700; color: var(--success-color);">${{ (item.price || 0) | number:'1.2-2' }}</td>
+              <td>
+                <span class="badge" [class.badge-pending]="item.status === 'Pending'" [class.badge-approved]="item.status === 'Approved'" [class.badge-paid]="item.status === 'Paid'" [class.badge-cancelled]="item.status === 'Cancelled'">
+                  {{ item.status }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Payment Documents Attachment Section -->
+    <div class="form-group-full" style="background: rgba(17, 24, 39, 0.7); padding: 24px; border-radius: var(--border-radius-md); border: 1px solid var(--glass-border); margin-top: 24px;">
+      <h4 style="color: var(--cyan-color); font-weight: 700; font-size: 16px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+        <span>📂</span> Payment Documents & Attachments
+      </h4>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+        Upload invoices, receipts, agreements, or other supporting documents regarding this payment.
+      </p>
+
+      <!-- Create Mode: Selected files list and Upload button -->
+      <div *ngIf="!isEditMode">
+        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+          <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px; border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc;">
+            <span>📎</span> Choose Documents
+            <input 
+              type="file" 
+              multiple 
+              (change)="onFileSelected($event)" 
+              style="display: none;"
+            >
+          </label>
+          <span style="font-size: 12px; color: var(--text-secondary);">
+            {{ selectedFiles.length === 0 ? 'No files selected' : selectedFiles.length + ' file(s) selected' }}
+          </span>
+        </div>
+
+        <!-- Selected Files List -->
+        <div *ngIf="selectedFiles.length > 0" style="background: rgba(0, 0, 0, 0.3); border-radius: var(--border-radius-sm); border: 1px solid rgba(255,255,255,0.05); padding: 12px; max-height: 200px; overflow-y: auto;">
+          <div *ngFor="let file of selectedFiles; let idx = index" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px;">
+            <div style="display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+              <span>📄</span>
+              <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;" [title]="file.name">{{ file.name }}</span>
+              <span style="font-size: 11px; color: var(--text-secondary);">({{ (file.size / 1024) | number:'1.0-0' }} KB)</span>
+            </div>
+            <button 
+              type="button" 
+              (click)="removeSelectedFile(idx)" 
+              style="background: transparent; border: none; color: var(--danger-color); cursor: pointer; font-size: 14px; padding: 0 4px;"
+              title="Remove File"
+            >
+              ❌
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit / View Mode: Load and display documents -->
+      <div *ngIf="isEditMode">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">
+            Uploaded Attachments ({{ documents.length }})
+          </span>
+          <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px; border-color: rgba(16, 185, 129, 0.4); color: var(--success-color);">
+            <span *ngIf="!uploadingFiles">➕ Add Documents</span>
+            <span *ngIf="uploadingFiles" class="spinner" style="width: 12px; height: 12px; border-width: 2px; margin: 0;"></span>
+            <span *ngIf="uploadingFiles">Uploading...</span>
+            <input 
+              type="file" 
+              multiple 
+              [disabled]="uploadingFiles"
+              (change)="uploadFilesDirectly($event)" 
+              style="display: none;"
+            >
+          </label>
+        </div>
+
+        <!-- No Documents State -->
+        <div *ngIf="documents.length === 0" style="text-align: center; padding: 24px; background: rgba(0, 0, 0, 0.2); border-radius: var(--border-radius-sm); border: 1px dashed var(--glass-border); color: var(--text-secondary); font-size: 13px;">
+          No documents uploaded for this invoice.
+        </div>
+
+        <!-- Documents List -->
+        <div *ngIf="documents.length > 0" style="background: rgba(0, 0, 0, 0.2); border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); overflow: hidden;">
+          <div *ngFor="let doc of documents" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border); font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 16px;">📄</span>
+              <span style="font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px;" [title]="doc">{{ doc }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <a 
+                [href]="getDocumentDownloadUrl(doc)" 
+                target="_blank" 
+                class="btn btn-secondary btn-sm" 
+                style="padding: 4px 10px; font-size: 12px; border-color: rgba(6, 182, 212, 0.3); color: var(--cyan-color); font-weight: 600;"
+              >
+                📥 View / Download
+              </a>
+              <button 
+                type="button" 
+                (click)="deleteDocument(doc)"
+                style="background: transparent; border: none; color: var(--danger-color); cursor: pointer; font-size: 14px; padding: 4px;"
+                title="Delete File"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Exchange Rate Verification Buttons Section -->
+    <div class="form-group-full" style="background: rgba(17, 24, 39, 0.6); padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); margin-top: 24px;">
+      <label style="color: var(--cyan-color); font-weight: 700; margin-bottom: 8px; display: block;">💱 Foreign / Currency Exchange Rate Check</label>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Directly verify daily foreign exchange buying and selling rates from official bank portals:</p>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a 
+          href="https://www.cbsl.gov.lk/en/rates-and-indicators/exchange-rates/daily-buy-and-sell-exchange-rates" 
+          target="_blank" 
+          class="btn btn-secondary btn-sm"
+          style="border-color: rgba(6, 182, 212, 0.4); color: var(--cyan-color);"
+        >
+          <span>🏦</span> Check CBSL Daily Exchange Rates
+        </a>
+        <a 
+          href="https://www.combank.lk/rates-and-tariff#exchange-rates" 
+          target="_blank" 
+          class="btn btn-secondary btn-sm"
+          style="border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc;"
+        >
+          <span>🏛️</span> Check Commercial Bank Rates
+        </a>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions" style="margin-top: 24px;">
+      <a routerLink="/invoices" class="btn btn-secondary">Back</a>
+      <button 
+        type="submit" 
+        class="btn btn-primary" 
+        [disabled]="invoiceForm.invalid || submitting || !!poOverLimitError"
+      >
+        <span *ngIf="submitting" class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
+        <span>{{ submitting ? 'Saving...' : (isEditMode ? 'Update Status' : 'Create Invoice') }}</span>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Success Popup Modal -->
+<div *ngIf="showSuccessModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="success-icon">✔</div>
+    <h3 class="modal-title">Invoice Successfully Registered</h3>
+    <p class="modal-message">
+      The billing entry has been successfully introduced into the system.
+    </p>
+    <div class="itd-box">
+      ITD Number: <span class="itd-highlight">{{ createdItdNo }}</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" (click)="dismissSuccessModal()">
+        Go to Invoice List
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Status Toast Notification -->
+<div *ngIf="showToast" class="toast-notification">
+  <div class="toast-content">
+    <span class="toast-icon">⚡</span>
+    <div class="toast-body">
+      <div class="toast-title">Status Updated Successfully</div>
+      <div class="toast-message">
+        Payment for <strong class="itd-text">{{ toastItd }}</strong> changed from <span class="status-old">{{ toastOldStatus }}</span> to <span class="status-new">{{ toastNewStatus }}</span>
+      </div>
+    </div>
+    <button (click)="closeToast()" class="toast-close">×</button>
+  </div>
+</div>

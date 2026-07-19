@@ -1,0 +1,228 @@
+.detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+}
+
+/* Certificate Document Styling */
+.cert-document {
+  position: relative;
+  border-top: 8px solid var(--primary-color);
+  padding: 40px;
+  overflow: hidden;
+}
+
+.cert-header {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--glass-border);
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+}
+
+.cert-title-area h3 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.doc-stamp {
+  position: absolute;
+  top: 30px;
+  right: 40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 4px double;
+  transform: rotate(-15deg);
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.stamp-approved {
+  color: var(--success-color);
+  border-color: var(--success-color);
+  box-shadow: 0 0 15px var(--success-glow);
+  text-shadow: 0 0 2px var(--success-glow);
+}
+
+.stamp-rejected {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+  box-shadow: 0 0 15px var(--danger-glow);
+  text-shadow: 0 0 2px var(--danger-glow);
+}
+
+.doc-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  margin-top: 24px;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--glass-border);
+}
+
+.data-row:last-child {
+  border-bottom: none;
+}
+
+.data-label {
+  color: var(--text-secondary);
+}
+
+.data-value {
+  font-weight: 600;
+}
+
+/* Approvals Timeline in Sidebar */
+.timeline-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 24px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  width: 2px;
+  height: calc(100% - 24px);
+  background: var(--glass-border);
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 24px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -24px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+  z-index: 2;
+}
+
+.timeline-item.approved .timeline-dot {
+  background: var(--success-color);
+  box-shadow: 0 0 8px var(--success-glow);
+}
+
+.timeline-item.rejected .timeline-dot {
+  background: var(--danger-color);
+  box-shadow: 0 0 8px var(--danger-glow);
+}
+
+.timeline-item.active .timeline-dot {
+  background: var(--warning-color);
+  box-shadow: 0 0 8px var(--warning-glow);
+  animation: pulse-dot 1.5s infinite;
+}
+
+.timeline-item.pending .timeline-dot {
+  background: var(--text-muted);
+}
+
+.timeline-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-role {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.timeline-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.timeline-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Simulation banner warning */
+.simulation-alert {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  color: var(--cyan-color);
+  padding: 16px;
+  border-radius: var(--border-radius-md);
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+/* Remarks block log */
+.remarks-log {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
+  margin-top: 24px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.remarks-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 6px;
+}
+
+.remarks-text {
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-line;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

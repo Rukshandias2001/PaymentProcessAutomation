@@ -1,0 +1,53 @@
+<div class="app-container">
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="brand-section">
+      <span class="brand-logo">💎</span>
+      <h1 class="brand-name">PayFlow Certify</h1>
+    </div>
+
+    <nav>
+      <ul class="nav-menu">
+        <li>
+          <a class="nav-link" routerLink="/dashboard" routerLinkActive="active">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" routerLink="/invoices" routerLinkActive="active">
+            <span class="nav-icon">📄</span>
+            <span>Invoices</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" routerLink="/certificates" routerLinkActive="active">
+            <span class="nav-icon">🛡️</span>
+            <span>Payment Certificates</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Simulator Settings Box -->
+    <div class="simulator-box">
+      <div class="simulator-title">Approver Simulator</div>
+      <div class="role-pills">
+        <button 
+          *ngFor="let role of roles"
+          class="role-pill" 
+          [class.active]="simService.currentRole() === role.code"
+          (click)="changeRole(role.code)"
+        >
+          <span>{{ role.icon }}</span>
+          <span>{{ role.name }}</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Workstation -->
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

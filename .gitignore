@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+env/
+.env
+
+# Python compilation artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Angular compilation cache and output
+.angular/
+dist/
+tmp/
+out-tsc/
+bazel-out/
+
+# IDEs/Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# System Logs
+*.log

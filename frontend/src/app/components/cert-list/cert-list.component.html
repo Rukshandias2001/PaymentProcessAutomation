@@ -1,0 +1,145 @@
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Payment Certificates</h2>
+    <p class="page-subtitle">Track certified billing values and sequential authorization gates progress.</p>
+  </div>
+  <div>
+    <a routerLink="/invoices" class="btn btn-primary">
+      <span>📄</span> Certify Pending Invoice
+    </a>
+  </div>
+</div>
+
+<!-- Errors Alert -->
+<div *ngIf="error" class="error-message">
+  ⚠️ {{ error }}
+</div>
+
+<!-- Loading Spinner -->
+<div *ngIf="loading && !error" class="loader-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 250px;">
+  <div class="spinner" style="width: 40px; height: 40px;"></div>
+  <p style="color: var(--text-secondary); margin-top: 16px;">Loading certificates directory...</p>
+</div>
+
+<!-- Certificates Table -->
+<div *ngIf="!loading && !error" class="glass-panel" style="padding: 0; overflow: hidden;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 140px;">Certificate No</th>
+          <th style="width: 140px;">Reference Invoice</th>
+          <th>Certified Amount</th>
+          <th>Status</th>
+          <th style="width: 250px;">Approval Gates Progress</th>
+          <th>Created Date</th>
+          <th style="width: 160px; text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      
+      <tbody>
+        <tr *ngFor="let cert of certificates">
+          <!-- Cert No -->
+          <td style="font-weight: 700; color: var(--primary-color);">{{ cert.certificate_no }}</td>
+          
+          <!-- Invoice Ref -->
+          <td style="font-weight: 600; color: var(--cyan-color);">{{ cert.itd_no }}</td>
+          
+          <!-- Amount -->
+          <td style="font-weight: 800; font-size: 15px;">
+            ${{ cert.amount_certified | number:'1.2-2' }}
+          </td>
+          
+          <!-- Current Status Badge -->
+          <td>
+            <span 
+              class="badge" 
+              [class.badge-pending]="cert.status.startsWith('Pending')" 
+              [class.badge-paid]="cert.status === 'Fully Approved'" 
+              [class.badge-rejected]="cert.status === 'Rejected'"
+            >
+              {{ cert.status }}
+            </span>
+          </td>
+          
+          <!-- Step Pipeline Tracker -->
+          <td>
+            <div class="pipeline-track">
+              <!-- PM Step -->
+              <span 
+                class="pipeline-step"
+                [class.step-approved]="cert.approver1_status === 'Approved'"
+                [class.step-rejected]="cert.approver1_status === 'Rejected'"
+                [class.step-active]="cert.status === 'Pending PM Approval'"
+                [class.step-pending]="cert.approver1_status === 'Pending' && cert.status !== 'Pending PM Approval'"
+                title="Project Manager (PM) gate"
+              >PM</span>
+              
+              <span class="pipeline-arrow">➔</span>
+              
+              <!-- TL Step -->
+              <span 
+                class="pipeline-step"
+                [class.step-approved]="cert.approver2_status === 'Approved'"
+                [class.step-rejected]="cert.approver2_status === 'Rejected'"
+                [class.step-active]="cert.status === 'Pending TL Approval'"
+                [class.step-pending]="cert.approver2_status === 'Pending' && cert.status !== 'Pending TL Approval'"
+                title="Technical Lead (TL) gate"
+              >TL</span>
+              
+              <span class="pipeline-arrow">➔</span>
+              
+              <!-- FC Step -->
+              <span 
+                class="pipeline-step"
+                [class.step-approved]="cert.approver3_status === 'Approved'"
+                [class.step-rejected]="cert.approver3_status === 'Rejected'"
+                [class.step-active]="cert.status === 'Pending FC Approval'"
+                [class.step-pending]="cert.approver3_status === 'Pending' && cert.status !== 'Pending FC Approval'"
+                title="Financial Controller (FC) gate"
+              >FC</span>
+              
+              <span class="pipeline-arrow">➔</span>
+              
+              <!-- FD Step -->
+              <span 
+                class="pipeline-step"
+                [class.step-approved]="cert.approver4_status === 'Approved'"
+                [class.step-rejected]="cert.approver4_status === 'Rejected'"
+                [class.step-active]="cert.status === 'Pending FD Approval'"
+                [class.step-pending]="cert.approver4_status === 'Pending' && cert.status !== 'Pending FD Approval'"
+                title="Finance Director (FD) gate"
+              >FD</span>
+            </div>
+          </td>
+          
+          <!-- Date -->
+          <td style="color: var(--text-secondary);">
+            {{ cert.created_at | date:'yyyy-MM-dd' }}
+          </td>
+          
+          <!-- Action Buttons -->
+          <td>
+            <div class="actions-cell">
+              <a 
+                [routerLink]="['/certificates/view', cert.certificate_no]" 
+                class="btn btn-secondary" 
+                style="padding: 6px 12px; font-size: 13px;"
+              >
+                <span>🔎</span> {{ cert.status.startsWith('Pending') ? 'Review & Sign' : 'View' }}
+              </a>
+            </div>
+          </td>
+        </tr>
+        
+        <!-- Empty Table State -->
+        <tr *ngIf="certificates.length === 0">
+          <td colspan="7" style="text-align: center; padding: 48px; color: var(--text-secondary);">
+            <div style="font-size: 24px; margin-bottom: 8px;">🛡️</div>
+            No payment certificates have been issued yet. Go to <a routerLink="/invoices" style="color: var(--cyan-color); font-weight: 600;">Invoices</a> to certify one.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
