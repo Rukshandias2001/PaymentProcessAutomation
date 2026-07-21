@@ -19,6 +19,7 @@ export class InvoiceListComponent implements OnInit {
   error = '';
   currentUser: any = null;
   invoicesAwaitingApproval: Invoice[] = [];
+  activeTab: 'queue' | 'all' = 'queue';
   
   // Toast state variables
   showToast = false;
@@ -104,6 +105,11 @@ export class InvoiceListComponent implements OnInit {
     this.paymentService.getInvoices({ current_approver: this.currentUser.role }, 1, 100).subscribe({
       next: (res) => {
         this.invoicesAwaitingApproval = res.items;
+        if (this.invoicesAwaitingApproval.length === 0) {
+          this.activeTab = 'all';
+        } else {
+          this.activeTab = 'queue';
+        }
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -359,5 +365,37 @@ export class InvoiceListComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  approveInvoiceDirectly(invoice: Invoice) {
+    const oldStatus = invoice.status;
+    this.paymentService.approveInvoice(invoice.itd_no).subscribe({
+      next: (updated) => {
+        this.triggerToast(invoice.itd_no, oldStatus, updated.status);
+        this.loadAwaitingApproval();
+        this.loadInvoices();
+      },
+      error: (err) => {
+        console.error(err);
+        alert(err.error?.detail || 'Failed to approve invoice.');
+      }
+    });
+  }
+
+  rejectInvoiceDirectly(invoice: Invoice) {
+    const oldStatus = invoice.status;
+    this.paymentService.rejectInvoice(invoice.itd_no).subscribe({
+      next: (updated) => {
+        this.triggerToast(invoice.itd_no, oldStatus, updated.status);
+        this.loadAwaitingApproval();
+        this.loadInvoices();
+      },
+      error: (err) => {
+        console.error(err);
+        alert(err.error?.detail || 'Failed to reject invoice.');
+      }
+    });
+  }
+
+  getDocumentDownloadUrl(invoice: Invoice, filename: string): string {
+    return `${this.paymentService.apiUrl}/invoices/${invoice.itd_no}/documents/${filename}`;
   }
 }

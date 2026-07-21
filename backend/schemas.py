@@ -57,6 +57,7 @@ class VendorInvoiceUpdate(VendorInvoiceBase):
 
 class VendorInvoiceResponse(VendorInvoiceBase):
     itd_no: str
+    documents: Optional[List[str]] = []
     
     model_config = ConfigDict(from_attributes=True)
 

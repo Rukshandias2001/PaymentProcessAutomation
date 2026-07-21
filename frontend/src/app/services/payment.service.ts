@@ -34,6 +34,7 @@ export interface Invoice {
   approved_by_dgm_at?: string;
   paid_at?: string;
   current_approver?: string;
+  documents?: string[];
 }
 
 export interface CostCenter {

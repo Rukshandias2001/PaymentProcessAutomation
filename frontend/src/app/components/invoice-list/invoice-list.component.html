@@ -13,244 +13,303 @@
   </div>
 </div>
 
-<!-- Awaiting My Action Queue Panel -->
-<div *ngIf="invoicesAwaitingApproval && invoicesAwaitingApproval.length > 0" class="glass-panel" style="margin-bottom: 32px; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.03); padding: 24px;">
-  <h3 style="color: #f59e0b; font-weight: 700; font-size: 18px; margin-top: 0; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-    <span>📥</span> Invoices Awaiting Your Action / Approval
-  </h3>
-  <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
-    These payments are currently waiting for sign-off or corrections from your role (<strong>{{ currentUser?.role }}</strong>).
-  </p>
-
-  <div class="table-container" style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: var(--border-radius-sm); overflow: hidden;">
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 120px;">ITD No</th>
-          <th>Vendor Name</th>
-          <th style="width: 180px;">Payment Type</th>
-          <th style="width: 120px;">Price ($)</th>
-          <th>Description</th>
-          <th style="width: 120px;">Status</th>
-          <th style="width: 100px; text-align: right;">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let invoice of invoicesAwaitingApproval" style="transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-          <td style="font-weight: 700; color: var(--cyan-color);">{{ invoice.itd_no }}</td>
-          <td style="font-weight: 600; color: #fff;">{{ invoice.vendor_names }}</td>
-          <td>
-            <span class="badge badge-info" style="font-size: 11px;">
-              {{ invoice.payment_type }}
-            </span>
-          </td>
-          <td style="font-family: monospace; font-weight: 700; color: var(--success-color);">
-            ${{ (invoice.price || 0) | number:'1.2-2' }}
-          </td>
-          <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="invoice.description">
-            {{ invoice.description }}
-          </td>
-          <td>
-            <span class="badge"
-              [class.badge-pending]="invoice.status === 'Pending'"
-              [class.badge-info]="invoice.status === 'Signature Pending'"
-              [class.badge-approved]="invoice.status === 'Approved'"
-              style="padding: 4px 8px; font-size: 11px; font-weight: 600;"
-            >
-              {{ invoice.status }}
-            </span>
-          </td>
-          <td style="text-align: right;">
-            <a [routerLink]="['/invoices', invoice.itd_no]" class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 12px; font-weight: bold; background: #f59e0b; border-color: #f59e0b; color: #000; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2); text-decoration: none;">
-              🔎 Process
-            </a>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+<!-- Tabs Navigation -->
+<div class="tabs-container" style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+  <!-- Tab 1: Approval Queue -->
+  <button 
+    type="button" 
+    class="tab-btn" 
+    [class.active]="activeTab === 'queue'" 
+    (click)="activeTab = 'queue'"
+    style="background: transparent; border: none; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 700; border-radius: var(--border-radius-sm); transition: all 0.25s;"
+    [style.color]="activeTab === 'queue' ? '#f59e0b' : 'var(--text-secondary)'"
+    [style.background]="activeTab === 'queue' ? 'rgba(245, 158, 11, 0.08)' : 'transparent'"
+    [style.border-bottom]="activeTab === 'queue' ? '2px solid #f59e0b' : 'none'"
+  >
+    📥 My Approval Queue ({{ invoicesAwaitingApproval.length }})
+  </button>
+  
+  <!-- Tab 2: All Records -->
+  <button 
+    type="button" 
+    class="tab-btn" 
+    [class.active]="activeTab === 'all'" 
+    (click)="activeTab = 'all'"
+    style="background: transparent; border: none; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 700; border-radius: var(--border-radius-sm); transition: all 0.25s;"
+    [style.color]="activeTab === 'all' ? 'var(--cyan-color)' : 'var(--text-secondary)'"
+    [style.background]="activeTab === 'all' ? 'rgba(6, 182, 212, 0.08)' : 'transparent'"
+    [style.border-bottom]="activeTab === 'all' ? '2px solid var(--cyan-color)' : 'none'"
+  >
+    📋 All Invoice Records ({{ total }})
+  </button>
 </div>
 
-<!-- Global Search & Stats -->
-<div class="glass-panel search-header-container">
-  <div style="display: flex; flex: 1; align-items: center; gap: 12px;">
-    <span style="font-size: 18px;">🔍</span>
-    <input 
-      [(ngModel)]="filters.global_search" 
-      (input)="onFilter()" 
-      class="global-search-input" 
-      placeholder="Global keyword search..."
-    >
-  </div>
-  <div style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
-    Page <strong>{{ page }}</strong> of <strong>{{ totalPages }}</strong> (Total <strong>{{ total }}</strong> records)
-  </div>
-</div>
-
-<!-- Invoices Table -->
-<div class="glass-panel" style="padding: 0; overflow: hidden;">
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 120px;">ITD No</th>
-          <th>Vendor Name</th>
-          <th style="width: 160px;">Payment Type</th>
-          <th style="width: 120px;">Price ($)</th>
-          <th>Description</th>
-          <th style="width: 120px;">PO Number</th>
-          <th style="width: 120px;">Status</th>
-          <th style="width: 120px; text-align: right;">Actions</th>
-        </tr>
-        <tr class="filter-row">
-          <td>
-            <input [(ngModel)]="filters.itd_no" (input)="onFilter()" placeholder="Filter ITD...">
-          </td>
-          <td>
-            <!-- Dropdown selecting from available vendors in backend database -->
-            <select [(ngModel)]="filters.vendor_names" (change)="onFilter()" style="padding: 4px 8px; font-size: 12px; height: auto;">
-              <option value="">All Vendors</option>
-              <option *ngFor="let vendor of vendors" [value]="vendor">{{ vendor }}</option>
-            </select>
-          </td>
-          <td>
-            <select [(ngModel)]="filters.payment_type" (change)="onFilter()" style="padding: 4px 8px; font-size: 12px; height: auto;">
-              <option value="">All Types</option>
-              <option value="Computer Equipment Purchases">Computer Equipment Purchases</option>
-              <option value="Computer Software Purchases">Computer Software Purchases</option>
-              <option value="Software Subscriptions (Monthly)">Software Subscriptions (Monthly)</option>
-              <option value="Software Subscriptions (Annual)">Software Subscriptions (Annual)</option>
-              <option value="Service & Maintenance">Service & Maintenance</option>
-              <option value="Foreign Payments">Foreign Payments</option>
-              <option value="Hardware Purchases">Hardware Purchases</option>
-              <option value="Software Purchases">Software Purchases</option>
-              <option value="Partial Equipment / PO Delivery">Partial Equipment / PO Delivery</option>
-            </select>
-          </td>
-          <td>
-            <!-- Price filter -->
-          </td>
-          <td>
-            <!-- Description filter -->
-          </td>
-          <td>
-            <input [(ngModel)]="filters.po_number" (input)="onFilter()" placeholder="Filter PO...">
-          </td>
-          <td>
-            <select [(ngModel)]="filters.status" (change)="onFilter()" style="padding: 4px 8px; font-size: 12px; height: auto;">
-              <option value="">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Paid">Paid</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </td>
-          <td></td>
-        </tr>
-      </thead>
-      
-      <tbody>
-        <tr *ngFor="let invoice of invoices" [class.row-cancelled]="invoice.status === 'Cancelled'">
-          <td style="font-weight: 700; color: var(--cyan-color);">{{ invoice.itd_no }}</td>
-          <td style="font-weight: 600;">{{ invoice.vendor_names }}</td>
-          <td>
-            <span *ngIf="invoice.payment_type" class="badge badge-info" style="font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;" [title]="invoice.payment_type">
-              {{ invoice.payment_type }}
-            </span>
-            <span *ngIf="!invoice.payment_type" style="color: var(--text-muted); font-size: 12px;">-</span>
-          </td>
-          <td style="font-family: monospace; font-weight: 700; color: var(--success-color);">
-            ${{ (invoice.price || 0) | number:'1.2-2' }}
-          </td>
-          <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="invoice.description">
-            {{ invoice.description }}
-          </td>
-          <td>{{ invoice.po_number }}</td>
-          <td>
-            <span class="badge"
-              [class.badge-pending]="invoice.status === 'Pending'"
-              [class.badge-info]="invoice.status === 'Signature Pending'"
-              [class.badge-approved]="invoice.status === 'Approved'"
-              [class.badge-paid]="invoice.status === 'Paid'"
-              [class.badge-cancelled]="invoice.status === 'Cancelled'"
-              style="padding: 4px 8px; font-size: 12px; font-weight: 600;"
-            >
-              {{ invoice.status }}
-            </span>
-          </td>
-          <td>
-            <div class="actions-cell">
-              <!-- View Record -->
-              <a 
-                [routerLink]="['/invoices/edit', invoice.itd_no]" 
-                class="btn-icon btn-icon-edit"
-                title="View Invoice Details"
-              >
-                <span>👁️</span> View
-              </a>
-            </div>
-          </td>
-        </tr>
-        
-        <!-- Empty Table State -->
-        <tr *ngIf="invoices.length === 0 && !loading">
-          <td colspan="10" style="text-align: center; padding: 48px; color: var(--text-secondary);">
-            <div style="font-size: 24px; margin-bottom: 8px;">📂</div>
-            No invoice records found matching your filters.
-          </td>
-        </tr>
-      </tbody>
-    </table>
+<!-- TAB 1: APPROVAL QUEUE CONTENT -->
+<div *ngIf="activeTab === 'queue'" class="glass-panel" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.01); padding: 24px;">
+  <div *ngIf="invoicesAwaitingApproval.length === 0" style="text-align: center; padding: 48px; color: var(--text-secondary); font-size: 15px;">
+    ✨ You're all caught up! No invoices require your approval.
   </div>
 
-  <!-- Pagination Bar -->
-  <div class="pagination-bar" *ngIf="total > 0">
-    <div class="pagination-info">
-      Page <strong>{{ page }}</strong> of <strong>{{ totalPages }}</strong> (Showing {{ invoices.length }} of {{ total }} records)
+  <div *ngIf="invoicesAwaitingApproval.length > 0">
+    <h3 style="color: #f59e0b; font-weight: 700; font-size: 18px; margin-top: 0; margin-bottom: 8px;">
+      Approval Queue Actions
+    </h3>
+    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px;">
+      View uploaded documents directly and click the checkmark icon to approve/proceed, or the cross icon to reject back to Manager.
+    </p>
+
+    <div class="table-container" style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); border-radius: var(--border-radius-sm); overflow: hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 120px;">ITD No</th>
+            <th>Vendor Name</th>
+            <th style="width: 180px;">Payment Type</th>
+            <th style="width: 120px;">Price ($)</th>
+            <th>Description</th>
+            <th>Uploaded Documents (Click to View)</th>
+            <th style="width: 120px; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let invoice of invoicesAwaitingApproval" style="transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <td style="font-weight: 700; color: var(--cyan-color);">{{ invoice.itd_no }}</td>
+            <td style="font-weight: 600; color: #fff;">{{ invoice.vendor_names }}</td>
+            <td>
+              <span class="badge badge-info" style="font-size: 11px;">
+                {{ invoice.payment_type }}
+              </span>
+            </td>
+            <td style="font-family: monospace; font-weight: 700; color: var(--success-color);">
+              ${{ (invoice.price || 0) | number:'1.2-2' }}
+            </td>
+            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="invoice.description">
+              {{ invoice.description }}
+            </td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <a 
+                  *ngFor="let doc of invoice.documents" 
+                  [href]="getDocumentDownloadUrl(invoice, doc)" 
+                  target="_blank" 
+                  style="font-size: 11px; padding: 4px 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 4px; color: var(--cyan-color); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; width: fit-content;"
+                >
+                  📄 {{ doc }} 📥
+                </a>
+                <span *ngIf="!invoice.documents || invoice.documents.length === 0" style="color: var(--text-muted); font-size: 11px; font-style: italic;">
+                  No documents attached
+                </span>
+              </div>
+            </td>
+            <td style="text-align: right;">
+              <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                <button 
+                  type="button" 
+                  (click)="approveInvoiceDirectly(invoice)" 
+                  title="Proceed to Next Approver"
+                  style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--success-color); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 13px;"
+                  onmouseover="this.style.background='var(--success-color)'; this.style.color='#fff';" 
+                  onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.color='var(--success-color)';"
+                >
+                  ✓
+                </button>
+                <button 
+                  type="button" 
+                  (click)="rejectInvoiceDirectly(invoice)" 
+                  title="Reject back to Manager"
+                  style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger-color); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 12px;"
+                  onmouseover="this.style.background='var(--danger-color)'; this.style.color='#fff';" 
+                  onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='var(--danger-color)';"
+                >
+                  ✗
+                </button>
+                <a 
+                  [routerLink]="['/invoices', invoice.itd_no]" 
+                  title="Inspect Details"
+                  style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: #fff; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; transition: all 0.2s; font-size: 13px;"
+                  onmouseover="this.style.background='var(--cyan-color)'; this.style.color='#000'; this.style.borderColor='var(--cyan-color)';" 
+                  onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.color='#fff'; this.style.borderColor='var(--glass-border)';"
+                >
+                  🔎
+                </a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    
-    <div class="pagination-controls">
-      <div class="page-size-selector">
-        <span>Per Page:</span>
-        <select [(ngModel)]="size" (change)="onPageSizeChange()" style="padding: 4px 8px; font-size: 12px; width: auto; height: auto;">
-          <option [ngValue]="5">5</option>
-          <option [ngValue]="10">10</option>
-          <option [ngValue]="20">20</option>
-          <option [ngValue]="50">50</option>
-        </select>
+  </div>
+</div>
+
+<!-- TAB 2: ALL RECORDS CONTENT -->
+<div *ngIf="activeTab === 'all'">
+  <!-- Global Search & Stats -->
+  <div class="glass-panel search-header-container">
+    <div style="display: flex; flex: 1; align-items: center; gap: 12px;">
+      <span style="font-size: 18px;">🔍</span>
+      <input 
+        [(ngModel)]="filters.global_search" 
+        (input)="onFilter()" 
+        class="global-search-input" 
+        placeholder="Global keyword search..."
+      >
+    </div>
+    <div style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
+      Page <strong>{{ page }}</strong> of <strong>{{ totalPages }}</strong> (Total <strong>{{ total }}</strong> records)
+    </div>
+  </div>
+
+  <!-- Invoices Table -->
+  <div class="glass-panel" style="padding: 0; overflow: hidden;">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 120px;">ITD No</th>
+            <th>Vendor Name</th>
+            <th style="width: 160px;">Payment Type</th>
+            <th style="width: 120px;">Price ($)</th>
+            <th>Description</th>
+            <th style="width: 120px;">PO Number</th>
+            <th style="width: 120px;">Status</th>
+            <th style="width: 120px; text-align: right;">Actions</th>
+          </tr>
+          <tr class="filter-row">
+            <td>
+              <input [(ngModel)]="filters.itd_no" (input)="onFilter()" placeholder="Filter ITD...">
+            </td>
+            <td>
+              <select [(ngModel)]="filters.vendor_names" (change)="onFilter()" style="padding: 4px 8px; font-size: 12px; height: auto;">
+                <option value="">All Vendors</option>
+                <option *ngFor="let vendor of vendors" [value]="vendor">{{ vendor }}</option>
+              </select>
+            </td>
+            <td>
+              <select [(ngModel)]="filters.payment_type" (change)="onFilter()" style="padding: 4px 8px; font-size: 12px; height: auto;">
+                <option value="">All Types</option>
+                <option value="Computer Equipment Purchases">Computer Equipment Purchases</option>
+                <option value="Computer Software Purchases">Computer Software Purchases</option>
+                <option value="Software Subscriptions (Monthly)">Software Subscriptions (Monthly)</option>
+                <option value="Software Subscriptions (Annual)">Software Subscriptions (Annual)</option>
+                <option value="Service & Maintenance">Service & Maintenance</option>
+                <option value="Foreign Payments">Foreign Payments</option>
+                <option value="Hardware Purchases">Hardware Purchases</option>
+                <option value="Software Purchases">Software Purchases</option>
+                <option value="Partial Equipment / PO Delivery">Partial Equipment / PO Delivery</option>
+              </select>
+            </td>
+            <td></td>
+            <td></td>
+            <td>
+              <input [(ngModel)]="filters.po_number" (input)="onFilter()" placeholder="Filter PO...">
+            </td>
+            <td>
+              <select [(ngModel)]="filters.status" (change)="onFilter()" style="padding: 4px 8px; font-size: 12px; height: auto;">
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Signature Pending">Signature Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Paid">Paid</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </td>
+            <td></td>
+          </tr>
+        </thead>
+        
+        <tbody>
+          <tr *ngFor="let invoice of invoices" [class.row-cancelled]="invoice.status === 'Cancelled'">
+            <td style="font-weight: 700; color: var(--cyan-color);">{{ invoice.itd_no }}</td>
+            <td style="font-weight: 600;">{{ invoice.vendor_names }}</td>
+            <td>
+              <span *ngIf="invoice.payment_type" class="badge badge-info" style="font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;" [title]="invoice.payment_type">
+                {{ invoice.payment_type }}
+              </span>
+              <span *ngIf="!invoice.payment_type" style="color: var(--text-muted); font-size: 12px;">-</span>
+            </td>
+            <td style="font-family: monospace; font-weight: 700; color: var(--success-color);">
+              ${{ (invoice.price || 0) | number:'1.2-2' }}
+            </td>
+            <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="invoice.description">
+              {{ invoice.description }}
+            </td>
+            <td>{{ invoice.po_number }}</td>
+            <td>
+              <span class="badge"
+                [class.badge-pending]="invoice.status === 'Pending'"
+                [class.badge-info]="invoice.status === 'Signature Pending'"
+                [class.badge-approved]="invoice.status === 'Approved'"
+                [class.badge-paid]="invoice.status === 'Paid'"
+                [class.badge-cancelled]="invoice.status === 'Cancelled'"
+                style="padding: 4px 8px; font-size: 12px; font-weight: 600;"
+              >
+                {{ invoice.status }}
+              </span>
+            </td>
+            <td style="text-align: right;">
+              <a [routerLink]="['/invoices', invoice.itd_no]" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-weight: bold; border-color: rgba(99, 102, 241, 0.3); color: #a5b4fc;">
+                🔎 Inspect Details
+              </a>
+            </td>
+          </tr>
+          <tr *ngIf="invoices.length === 0">
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              No invoices found in database matching criteria.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Bar -->
+    <div class="pagination-bar" *ngIf="total > 0">
+      <div class="pagination-info">
+        Page <strong>{{ page }}</strong> of <strong>{{ totalPages }}</strong> (Showing {{ invoices.length }} of {{ total }} records)
       </div>
       
-      <button class="btn btn-secondary btn-sm" [disabled]="page === 1" (click)="prevPage()">⬅️ Prev</button>
-      
+      <div class="pagination-controls">
+        <div class="page-size-selector">
+          <span>Per Page:</span>
+          <select [(ngModel)]="size" (change)="onPageSizeChange()" style="padding: 4px 8px; font-size: 12px; width: auto; height: auto;">
+            <option [ngValue]="5">5</option>
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-secondary btn-sm" [disabled]="page === 1" (click)="prevPage()">⬅️ Prev</button>
+        
+        <button 
+          *ngFor="let p of getPageArray()" 
+          class="btn btn-sm" 
+          [class.btn-primary]="p === page"
+          [class.btn-secondary]="p !== page"
+          (click)="goToPage(p)"
+        >
+          {{ p }}
+        </button>
+        
+        <button class="btn btn-secondary btn-sm" [disabled]="page >= totalPages" (click)="nextPage()">Next ➡️</button>
+      </div>
+    </div>
+
+    <!-- Excel Export Footer Action Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: rgba(17, 24, 39, 0.95); border-top: 1px solid var(--glass-border);" *ngIf="total > 0">
       <button 
-        *ngFor="let p of getPageArray()" 
-        class="btn btn-sm" 
-        [class.btn-primary]="p === page"
-        [class.btn-secondary]="p !== page"
-        (click)="goToPage(p)"
+        class="btn btn-success" 
+        (click)="exportToExcel()" 
+        [disabled]="exportingExcel"
+        style="padding: 10px 22px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;"
       >
-        {{ p }}
+        <span *ngIf="!exportingExcel" style="font-size: 16px;">📊</span>
+        <span *ngIf="exportingExcel" class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
+        <span>{{ exportingExcel ? 'Generating Excel Sheet...' : 'Load to Excel Sheet' }}</span>
       </button>
       
-      <button class="btn btn-secondary btn-sm" [disabled]="page >= totalPages" (click)="nextPage()">Next ➡️</button>
-    </div>
-  </div>
-
-  <!-- Excel Export Footer Action Bar -->
-  <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: rgba(17, 24, 39, 0.95); border-top: 1px solid var(--glass-border);" *ngIf="total > 0">
-    <button 
-      class="btn btn-success" 
-      (click)="exportToExcel()" 
-      [disabled]="exportingExcel"
-      style="padding: 10px 22px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;"
-    >
-      <span *ngIf="!exportingExcel" style="font-size: 16px;">📊</span>
-      <span *ngIf="exportingExcel" class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
-      <span>{{ exportingExcel ? 'Generating Excel Sheet...' : 'Load to Excel Sheet' }}</span>
-    </button>
-    
-    <div style="font-size: 13px; color: var(--text-secondary);">
-      Exports exact filtered dataset (<strong>{{ total }}</strong> matching records) to a formatted <strong>.xlsx</strong> Excel spreadsheet
+      <div style="font-size: 13px; color: var(--text-secondary);">
+        Exports exact filtered dataset (<strong>{{ total }}</strong> matching records) to a formatted <strong>.xlsx</strong> Excel spreadsheet
+      </div>
     </div>
   </div>
 </div>

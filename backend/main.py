@@ -149,6 +149,13 @@ def get_accounts(db: Session = Depends(get_db)):
     return db.query(models.Account).all()
 
 
+def get_documents_for_invoice(invoice) -> List[str]:
+    folder_path = get_invoice_folder_path(invoice.invoice_took_date, invoice.itd_no, invoice.vendor_names)
+    if not os.path.exists(folder_path):
+        return []
+    return [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+
+
 @app.get("/api/invoices", response_model=schemas.PaginatedInvoiceResponse)
 def get_invoices(
     db: Session = Depends(get_db),
@@ -211,6 +218,8 @@ def get_invoices(
     total_pages = math.ceil(total / size) if total > 0 else 1
     skip = (page - 1) * size
     items = query.offset(skip).limit(size).all()
+    for item in items:
+        item.documents = get_documents_for_invoice(item)
     
     return {
         "items": items,
@@ -245,6 +254,7 @@ def get_invoice(itd_no: str, db: Session = Depends(get_db)):
     invoice = db.query(models.VendorInvoice).filter(models.VendorInvoice.itd_no == itd_no).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+    invoice.documents = get_documents_for_invoice(invoice)
     return invoice
 
 
