@@ -118,6 +118,19 @@ def run_tests():
     assert invoice["status"] == "Pending"
     assert invoice["current_approver"] == "Manager"
     
+    
+    # 2.5 Verify queue filtration
+    code, queue_data = make_request(f"{BASE_URL}/invoices?current_approver=Manager", headers=mgr_headers)
+    assert code == 200
+    manager_items = [item["itd_no"] for item in queue_data["items"]]
+    assert itd_no in manager_items, f"Manager queue missing created invoice {itd_no}"
+    
+    code, queue_data = make_request(f"{BASE_URL}/invoices?current_approver=Senior+Manager+IT+Operations", headers=mgr_headers)
+    assert code == 200
+    sm_items = [item["itd_no"] for item in queue_data["items"]]
+    assert itd_no not in sm_items, f"Senior Manager queue has unexpected invoice {itd_no}"
+    print("✅ Verified correct queue filtration for active approvers.")
+    
     # 3. Manager correct invoice (should succeed because status is Pending)
     correct_payload = create_payload.copy()
     correct_payload["price"] = 15000.00  # Correct price

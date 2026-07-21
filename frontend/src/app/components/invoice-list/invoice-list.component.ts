@@ -17,6 +17,8 @@ export class InvoiceListComponent implements OnInit {
   loading = true;
   exportingExcel = false;
   error = '';
+  currentUser: any = null;
+  invoicesAwaitingApproval: Invoice[] = [];
   
   // Toast state variables
   showToast = false;
@@ -51,6 +53,11 @@ export class InvoiceListComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.paymentService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      this.loadAwaitingApproval();
+      this.cdr.detectChanges();
+    });
     this.loadVendors();
     this.loadInvoices();
   }
@@ -85,6 +92,22 @@ export class InvoiceListComponent implements OnInit {
         this.error = 'Failed to fetch invoices from the database.';
         this.loading = false;
         this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadAwaitingApproval() {
+    if (!this.currentUser) {
+      this.invoicesAwaitingApproval = [];
+      return;
+    }
+    this.paymentService.getInvoices({ current_approver: this.currentUser.role }, 1, 100).subscribe({
+      next: (res) => {
+        this.invoicesAwaitingApproval = res.items;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load invoices awaiting approval:', err);
       }
     });
   }

@@ -163,7 +163,8 @@ def get_invoices(
     po_number: Optional[str] = None,
     status: Optional[str] = None,
     payment_type: Optional[str] = None,
-    global_search: Optional[str] = None
+    global_search: Optional[str] = None,
+    current_approver: Optional[str] = None
 ):
     query = db.query(models.VendorInvoice)
     
@@ -187,6 +188,8 @@ def get_invoices(
         query = query.filter(models.VendorInvoice.status.ilike(f"%{status}%"))
     if payment_type:
         query = query.filter(models.VendorInvoice.payment_type.ilike(f"%{payment_type}%"))
+    if current_approver:
+        query = query.filter(models.VendorInvoice.current_approver.ilike(f"{current_approver}"))
         
     # Global search matching any header column
     if global_search:
