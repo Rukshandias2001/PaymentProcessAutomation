@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 export interface Invoice {
   itd_no: string;
@@ -105,8 +106,46 @@ export interface PaginatedInvoices {
 })
 export class PaymentService {
   private apiUrl = 'http://127.0.0.1:8000/api';
+  private currentUserSubject = new BehaviorSubject<any>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    const saved = localStorage.getItem('currentUser');
+    if (saved) {
+      try {
+        this.currentUserSubject.next(JSON.parse(saved));
+      } catch (e) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('authToken');
+      }
+    }
+  }
+
+  public get currentUserValue() {
+    return this.currentUserSubject.value;
+  }
+
+  login(username: string, password: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auth/login`, { username, password }).pipe(
+      tap(res => {
+        if (res && res.token) {
+          localStorage.setItem('authToken', res.token);
+          localStorage.setItem('currentUser', JSON.stringify(res.user));
+          this.currentUserSubject.next(res.user);
+        }
+      })
+    );
+  }
+
+  logout(): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auth/logout`, {}).pipe(
+      tap(() => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+        this.currentUserSubject.next(null);
+      })
+    );
+  }
 
   // Dashboard Stats
   getStats(): Observable<DashboardStats> {
@@ -198,6 +237,18 @@ export class PaymentService {
 
   approveInvoice(itdNo: string): Observable<Invoice> {
     return this.http.post<Invoice>(`${this.apiUrl}/invoices/${itdNo}/approve`, {});
+  }
+
+  rejectInvoice(itdNo: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`${this.apiUrl}/invoices/${itdNo}/reject`, {});
+  }
+
+  correctInvoice(itdNo: string, updates: Partial<Invoice>): Observable<Invoice> {
+    return this.http.put<Invoice>(`${this.apiUrl}/invoices/${itdNo}/correct`, updates);
+  }
+
+  cancelInvoice(itdNo: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`${this.apiUrl}/invoices/${itdNo}/cancel`, {});
   }
 
   // Certificate CRUD

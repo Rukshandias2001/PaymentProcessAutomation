@@ -87,5 +87,20 @@ class PaymentCertificate(Base):
         "VendorInvoice",
         primaryjoin="PaymentCertificate.itd_no == VendorInvoice.itd_no",
         foreign_keys=[itd_no],
-        uselist=False
     )
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False)
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    token = Column(String(255), primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    expires_at = Column(DateTime, nullable=False)

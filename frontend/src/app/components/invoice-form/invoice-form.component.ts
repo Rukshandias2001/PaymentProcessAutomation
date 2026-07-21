@@ -34,6 +34,7 @@ export class InvoiceFormComponent implements OnInit {
   accounts: Account[] = [];
   subscriptionHistory: SubscriptionHistoryItem[] = [];
   exportingSubscriptionExcel = false;
+  currentUser: any = null;
   
   invoice: Invoice = {
     itd_no: '',
@@ -63,6 +64,10 @@ export class InvoiceFormComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.paymentService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      this.cdr.detectChanges();
+    });
     this.loadCostCenters();
     this.loadAccounts();
     this.route.paramMap.subscribe(params => {
@@ -712,7 +717,72 @@ export class InvoiceFormComponent implements OnInit {
       },
       error: (err) => {
         console.error('Workflow approval failed:', err);
-        alert('Failed to process approval workflow.');
+        alert(err.error?.detail || 'Failed to process approval workflow.');
+      }
+    });
+  }
+
+  isFormEditable(): boolean {
+    if (!this.isEditMode) return true;
+    return this.invoice.status === 'Pending' && this.currentUser?.role === 'Manager';
+  }
+
+  rejectInvoiceWorkflow() {
+    const oldStatus = this.invoice.status;
+    this.paymentService.rejectInvoice(this.invoice.itd_no).subscribe({
+      next: (updatedInvoice) => {
+        const newStatus = updatedInvoice.status;
+        this.triggerToast(this.invoice.itd_no, oldStatus, newStatus);
+        this.invoice = {
+          ...this.invoice,
+          ...updatedInvoice
+        };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Workflow rejection failed:', err);
+        alert(err.error?.detail || 'Failed to reject invoice.');
+      }
+    });
+  }
+
+  cancelInvoiceWorkflow() {
+    const oldStatus = this.invoice.status;
+    this.paymentService.cancelInvoice(this.invoice.itd_no).subscribe({
+      next: (updatedInvoice) => {
+        const newStatus = updatedInvoice.status;
+        this.triggerToast(this.invoice.itd_no, oldStatus, newStatus);
+        this.invoice = {
+          ...this.invoice,
+          ...updatedInvoice
+        };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Workflow cancellation failed:', err);
+        alert(err.error?.detail || 'Failed to cancel invoice.');
+      }
+    });
+  }
+
+  saveCorrections() {
+    this.submitting = true;
+    this.cdr.detectChanges();
+    this.paymentService.correctInvoice(this.invoice.itd_no, this.invoice).subscribe({
+      next: (updatedInvoice) => {
+        this.submitting = false;
+        this.invoice = {
+          ...this.invoice,
+          ...updatedInvoice
+        };
+        alert('Corrections saved successfully!');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Saving corrections failed:', err);
+        this.error = err.error?.detail || 'Failed to save corrections.';
+        this.submitting = false;
+        this.cdr.detectChanges();
       }
     });
   }

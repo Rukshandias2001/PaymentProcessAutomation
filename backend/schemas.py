@@ -121,3 +121,23 @@ class DashboardStats(BaseModel):
     certified_amount_sum: Decimal
     pending_approvals: int
     fully_approved_certs: int
+
+
+# Authentication schemas
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    role: str
+    name: str
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LoginResponse(BaseModel):
+    token: str
+    user: UserResponse

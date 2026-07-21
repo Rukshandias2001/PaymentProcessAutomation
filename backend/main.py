@@ -9,6 +9,9 @@ from decimal import Decimal
 import os
 import shutil
 import json
+import secrets
+import hashlib
+from datetime import timedelta
 
 import models
 import schemas
@@ -28,6 +31,70 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+security = HTTPBearer(auto_error=False)
+
+def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)
+) -> models.User:
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+        
+    token = credentials.credentials
+    session = db.query(models.UserSession).filter(models.UserSession.token == token).first()
+    if not session or session.expires_at < datetime.utcnow():
+        if session:
+            db.delete(session)
+            db.commit()
+        raise HTTPException(status_code=401, detail="Invalid or expired session token")
+        
+    user = db.query(models.User).filter(models.User.id == session.user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    return user
+
+
+@app.post("/api/auth/login", response_model=schemas.LoginResponse)
+def login(request: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.username == request.username).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+        
+    salt = "antigravity_salt_123"
+    pwd_hash = hashlib.sha256(f"{request.password}{salt}".encode()).hexdigest()
+    if pwd_hash != user.password_hash:
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+        
+    # Generate session token
+    token = secrets.token_hex(32)
+    expires_at = datetime.utcnow() + timedelta(days=1)
+    
+    session = models.UserSession(token=token, user_id=user.id, expires_at=expires_at)
+    db.add(session)
+    db.commit()
+    
+    return {
+        "token": token,
+        "user": user
+    }
+
+
+@app.post("/api/auth/logout")
+def logout(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)):
+    if credentials:
+        token = credentials.credentials
+        db.query(models.UserSession).filter(models.UserSession.token == token).delete()
+        db.commit()
+    return {"detail": "Logged out successfully"}
+
+
+@app.get("/api/auth/me", response_model=schemas.UserResponse)
+def get_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
 
 # ----------------- Dashboard Endpoint -----------------
 @app.get("/api/dashboard/stats", response_model=schemas.DashboardStats)
@@ -325,8 +392,12 @@ def get_invoice_folder_path(invoice_took_date_str: Optional[str], itd_no: str, v
 def create_invoice(
     invoice_data_str: str = Form(...),
     files: List[UploadFile] = File([]),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
+    if current_user.role != "Manager":
+        raise HTTPException(status_code=403, detail="Only Managers (Approver 1) can create invoices")
+        
     try:
         invoice_dict = json.loads(invoice_data_str)
         invoice = schemas.VendorInvoiceCreate(**invoice_dict)
@@ -464,10 +535,21 @@ def delete_invoice(itd_no: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/invoices/{itd_no}/approve", response_model=schemas.VendorInvoiceResponse)
-def approve_invoice(itd_no: str, db: Session = Depends(get_db)):
+def approve_invoice(
+    itd_no: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     invoice = db.query(models.VendorInvoice).filter(models.VendorInvoice.itd_no == itd_no).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    # Check authorization
+    if current_user.role != invoice.current_approver:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Only the active approver ({invoice.current_approver}) can approve this invoice."
+        )
         
     now = datetime.utcnow()
     
@@ -497,6 +579,83 @@ def approve_invoice(itd_no: str, db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=400, detail=f"Cannot approve invoice in current status: {invoice.status}")
         
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
+
+@app.post("/api/invoices/{itd_no}/reject", response_model=schemas.VendorInvoiceResponse)
+def reject_invoice(
+    itd_no: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    invoice = db.query(models.VendorInvoice).filter(models.VendorInvoice.itd_no == itd_no).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    if current_user.role != invoice.current_approver:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Only the active approver ({invoice.current_approver}) can reject this invoice."
+        )
+        
+    # Rejection routes back to Manager / Pending stage
+    invoice.status = "Pending"
+    invoice.current_approver = "Manager"
+    
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
+
+@app.put("/api/invoices/{itd_no}/correct", response_model=schemas.VendorInvoiceResponse)
+def correct_invoice(
+    itd_no: str,
+    invoice_update: schemas.VendorInvoiceUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    invoice = db.query(models.VendorInvoice).filter(models.VendorInvoice.itd_no == itd_no).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    if current_user.role != "Manager":
+        raise HTTPException(status_code=403, detail="Only Managers can correct or edit invoices.")
+        
+    if invoice.status != "Pending":
+        raise HTTPException(status_code=400, detail="Invoices can only be corrected/edited in the Pending stage.")
+        
+    # Update fields
+    update_data = invoice_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        if key not in ("status", "current_approver", "created_at", "paid_at", "itd_no"):
+            setattr(invoice, key, value)
+            
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
+
+@app.post("/api/invoices/{itd_no}/cancel", response_model=schemas.VendorInvoiceResponse)
+def cancel_invoice(
+    itd_no: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    invoice = db.query(models.VendorInvoice).filter(models.VendorInvoice.itd_no == itd_no).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    if current_user.role != "Manager":
+        raise HTTPException(status_code=403, detail="Only Managers can cancel invoices.")
+        
+    if invoice.status != "Pending":
+        raise HTTPException(status_code=400, detail="Invoices can only be cancelled in the Pending stage.")
+        
+    invoice.status = "Cancelled"
+    invoice.current_approver = None
+    
     db.commit()
     db.refresh(invoice)
     return invoice

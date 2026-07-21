@@ -1,4 +1,4 @@
-<div class="app-container">
+<div *ngIf="paymentService.currentUserValue; else loginTemp" class="app-container">
   <!-- Sidebar Navigation -->
   <aside class="sidebar">
     <div class="brand-section">
@@ -31,7 +31,7 @@
 
     <!-- Simulator Settings Box -->
     <div class="simulator-box">
-      <div class="simulator-title">Approver Simulator</div>
+      <div class="simulator-title">Cert Approver Simulator</div>
       <div class="role-pills">
         <button 
           *ngFor="let role of roles"
@@ -44,6 +44,17 @@
         </button>
       </div>
     </div>
+
+    <!-- Logged in User Profile Info & Logout Button -->
+    <div style="margin-top: auto; padding: 16px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 13px; font-weight: 700; color: #FFF;">{{ paymentService.currentUserValue.name }}</span>
+        <span style="font-size: 11px; color: var(--cyan-color); font-weight: bold;">{{ paymentService.currentUserValue.role }}</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" (click)="logout()" style="width: 100%; font-weight: bold; font-size: 11px; height: 28px; padding: 0;">
+        🚪 Log Out
+      </button>
+    </div>
   </aside>
 
   <!-- Main Workstation -->
@@ -51,3 +62,7 @@
     <router-outlet></router-outlet>
   </main>
 </div>
+
+<ng-template #loginTemp>
+  <app-login></app-login>
+</ng-template>

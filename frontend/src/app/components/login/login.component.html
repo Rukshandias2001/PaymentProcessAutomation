@@ -1,0 +1,63 @@
+<div class="login-container">
+  <div class="glass-panel login-card">
+    <div class="login-logo">PAYFLOW CERTIFY</div>
+    <div class="login-title">Internal Payment Processing & Signoff</div>
+
+    <!-- Error notice -->
+    <div *ngIf="error" class="error-banner" style="margin-bottom: 20px; padding: 12px; border-radius: var(--border-radius-sm); background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 13px; font-weight: 600;">
+      ❌ {{ error }}
+    </div>
+
+    <form (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          [(ngModel)]="username" 
+          placeholder="e.g. manager"
+          required
+          style="width: 100%;"
+        >
+      </div>
+
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label for="password">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          [(ngModel)]="password" 
+          placeholder="Enter password"
+          required
+          style="width: 100%;"
+        >
+      </div>
+
+      <button 
+        type="submit" 
+        class="btn btn-primary" 
+        style="width: 100%; font-weight: 700; height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px;"
+        [disabled]="loading"
+      >
+        <span *ngIf="loading" class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></span>
+        <span>{{ loading ? 'Authenticating...' : 'Sign In' }}</span>
+      </button>
+    </form>
+
+    <!-- Quick Access Demo Roles -->
+    <div class="demo-grid">
+      <div class="demo-title">⚡ Quick Access Roles (One-Click Sign In)</div>
+      <button 
+        *ngFor="let acc of demoAccounts" 
+        type="button" 
+        class="demo-btn"
+        (click)="quickLogin(acc.username)"
+      >
+        <span class="demo-btn-label">{{ acc.label }}</span>
+        <span class="demo-btn-desc">{{ acc.description }}</span>
+      </button>
+    </div>
+  </div>
+</div>
