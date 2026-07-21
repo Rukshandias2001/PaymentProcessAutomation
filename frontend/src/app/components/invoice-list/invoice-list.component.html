@@ -14,7 +14,7 @@
 </div>
 
 <!-- Tabs Navigation -->
-<div class="tabs-container" style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+<div *ngIf="currentUser?.role === 'Manager'" class="tabs-container" style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
   <!-- Tab 1: Approval Queue -->
   <button 
     type="button" 

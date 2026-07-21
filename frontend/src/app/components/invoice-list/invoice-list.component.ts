@@ -105,10 +105,14 @@ export class InvoiceListComponent implements OnInit {
     this.paymentService.getInvoices({ current_approver: this.currentUser.role }, 1, 100).subscribe({
       next: (res) => {
         this.invoicesAwaitingApproval = res.items;
-        if (this.invoicesAwaitingApproval.length === 0) {
-          this.activeTab = 'all';
-        } else {
+        if (this.currentUser.role !== 'Manager') {
           this.activeTab = 'queue';
+        } else {
+          if (this.invoicesAwaitingApproval.length === 0) {
+            this.activeTab = 'all';
+          } else {
+            this.activeTab = 'queue';
+          }
         }
         this.cdr.detectChanges();
       },

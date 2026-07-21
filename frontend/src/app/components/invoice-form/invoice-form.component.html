@@ -45,8 +45,8 @@
       </span>
     </h3>
 
-    <!-- Tracker Stepper Layout -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; margin-bottom: 32px; flex-wrap: wrap; gap: 20px; padding: 0 10px;">
+    <!-- Tracker Stepper Layout (Only visible to Manager) -->
+    <div *ngIf="currentUser?.role === 'Manager'" style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; margin-bottom: 32px; flex-wrap: wrap; gap: 20px; padding: 0 10px;">
       
       <!-- Background Connecting Line -->
       <div style="position: absolute; top: 18px; left: 5%; right: 5%; height: 4px; background: rgba(255, 255, 255, 0.1); z-index: 1;"></div>
