@@ -130,7 +130,14 @@ export class InvoiceFormComponent implements OnInit {
           account_id: data.account_id,
           account_number: data.account_number,
           account_type: data.account_type,
-          invoice_number: data.invoice_number || ''
+          invoice_number: data.invoice_number || '',
+          created_at: data.created_at,
+          sent_to_signature_pending_at: data.sent_to_signature_pending_at,
+          approved_by_senior_manager_at: data.approved_by_senior_manager_at,
+          approved_by_head_of_it_at: data.approved_by_head_of_it_at,
+          approved_by_dgm_at: data.approved_by_dgm_at,
+          paid_at: data.paid_at,
+          current_approver: data.current_approver
         };
         this.retrofitLegacyFields();
         if (this.isNonPurchasePaymentType()) {
