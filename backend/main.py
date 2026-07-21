@@ -389,6 +389,15 @@ def create_invoice(
         if existing:
             raise HTTPException(status_code=400, detail="Invoice with this ITD Number already exists")
     
+    # Set workflow stages
+    if files and len(files) > 0:
+        invoice_data["status"] = "Signature Pending"
+        invoice_data["current_approver"] = "Senior Manager IT Operations"
+        invoice_data["sent_to_signature_pending_at"] = datetime.utcnow()
+    else:
+        invoice_data["status"] = "Pending"
+        invoice_data["current_approver"] = "Manager"
+        
     db_invoice = models.VendorInvoice(**invoice_data)
     db.add(db_invoice)
     db.commit()
@@ -454,6 +463,45 @@ def delete_invoice(itd_no: str, db: Session = Depends(get_db)):
     return {"detail": "Invoice and associated certificates deleted successfully"}
 
 
+@app.post("/api/invoices/{itd_no}/approve", response_model=schemas.VendorInvoiceResponse)
+def approve_invoice(itd_no: str, db: Session = Depends(get_db)):
+    invoice = db.query(models.VendorInvoice).filter(models.VendorInvoice.itd_no == itd_no).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    now = datetime.utcnow()
+    
+    # Workflow transitions
+    if invoice.status == "Signature Pending":
+        if invoice.current_approver == "Senior Manager IT Operations":
+            invoice.current_approver = "Head of IT"
+            invoice.approved_by_senior_manager_at = now
+        elif invoice.current_approver == "Head of IT":
+            invoice.current_approver = "DGM Operations"
+            invoice.approved_by_head_of_it_at = now
+        elif invoice.current_approver == "DGM Operations":
+            invoice.status = "Approved"
+            invoice.current_approver = "Central Accounts"
+            invoice.approved_by_dgm_at = now
+        else:
+            raise HTTPException(status_code=400, detail="Invalid approver for Signature Pending status")
+            
+    elif invoice.status == "Approved":
+        if invoice.current_approver == "Central Accounts":
+            invoice.status = "Paid"
+            invoice.current_approver = "Completed"
+            invoice.paid_at = now
+        else:
+            raise HTTPException(status_code=400, detail="Invalid approver for Approved status")
+            
+    else:
+        raise HTTPException(status_code=400, detail=f"Cannot approve invoice in current status: {invoice.status}")
+        
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
+
 # ----------------- Document Endpoints -----------------
 @app.get("/api/invoices/{itd_no}/documents")
 def get_invoice_documents(itd_no: str, db: Session = Depends(get_db)):
@@ -511,6 +559,14 @@ def upload_more_documents(
                 with open(target_file_path, "wb") as buffer:
                     shutil.copyfileobj(f.file, buffer)
                 saved_files.append(filename_clean)
+                
+        if len(saved_files) > 0 and invoice.status == "Pending":
+            invoice.status = "Signature Pending"
+            invoice.current_approver = "Senior Manager IT Operations"
+            invoice.sent_to_signature_pending_at = datetime.utcnow()
+            db.commit()
+            db.refresh(invoice)
+            
         return {"detail": "Documents uploaded successfully", "files": saved_files}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload documents: {str(e)}")

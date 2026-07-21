@@ -21,6 +21,13 @@ class VendorInvoice(Base):
     purchased_goods = Column(Integer, nullable=True)
     vender_details = Column(Text)
     invoice_number = Column(String(100), unique=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sent_to_signature_pending_at = Column(DateTime, nullable=True)
+    approved_by_senior_manager_at = Column(DateTime, nullable=True)
+    approved_by_head_of_it_at = Column(DateTime, nullable=True)
+    approved_by_dgm_at = Column(DateTime, nullable=True)
+    paid_at = Column(DateTime, nullable=True)
+    current_approver = Column(String(100), nullable=True)
     
     # Extra columns already present in the database table
     cost_center_id = Column(Integer, nullable=True)

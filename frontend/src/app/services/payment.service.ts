@@ -26,6 +26,13 @@ export interface Invoice {
   account_number?: string;
   account_type?: string;
   invoice_number?: string;
+  created_at?: string;
+  sent_to_signature_pending_at?: string;
+  approved_by_senior_manager_at?: string;
+  approved_by_head_of_it_at?: string;
+  approved_by_dgm_at?: string;
+  paid_at?: string;
+  current_approver?: string;
 }
 
 export interface CostCenter {
@@ -187,6 +194,10 @@ export class PaymentService {
 
   getSubscriptionHistory(itdNo: string): Observable<SubscriptionHistoryItem[]> {
     return this.http.get<SubscriptionHistoryItem[]>(`${this.apiUrl}/invoices/${itdNo}/subscription-history`);
+  }
+
+  approveInvoice(itdNo: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`${this.apiUrl}/invoices/${itdNo}/approve`, {});
   }
 
   // Certificate CRUD

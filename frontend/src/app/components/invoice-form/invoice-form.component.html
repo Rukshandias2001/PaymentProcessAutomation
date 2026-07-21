@@ -22,7 +22,7 @@
 
 <!-- Edit / View Mode Notice -->
 <div *ngIf="isEditMode && !loading" class="glass-panel" style="background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.2); margin-bottom: 24px; padding: 16px;">
-  ℹ️ <strong>View Mode Active:</strong> Displaying all invoice details for ITD No <strong>{{ invoice.itd_no }}</strong>. The <strong>Status</strong> dropdown remains editable for status adjustments.
+  ℹ️ <strong>Approval Workflow:</strong> Use the action progression tracker below to check payment details, view turnaround days, and simulate approval progress.
 </div>
 
 <!-- Loading Spinner -->
@@ -32,6 +32,160 @@
 
 <!-- Invoice Form Panel -->
 <div *ngIf="!loading" class="glass-panel">
+  
+  <!-- Progression Tracker Section -->
+  <div *ngIf="isEditMode" style="margin-bottom: 32px; padding: 24px; background: rgba(17, 24, 39, 0.85); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md);">
+    <h3 style="color: var(--cyan-color); font-weight: 700; font-size: 18px; margin-bottom: 24px; margin-top: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;">
+      <span>📊 Payment Approval & Progression Tracker</span>
+      <span *ngIf="invoice.status === 'Paid'" style="color: var(--success-color); font-size: 14px;">
+        ⏱️ Total Turnaround: <strong style="font-family: monospace;">{{ getTotalTurnaround() }}</strong>
+      </span>
+      <span *ngIf="invoice.status !== 'Paid'" style="color: var(--warning-color); font-size: 14px;">
+        ⏱️ Turnaround Turnaround: <strong style="font-family: monospace;">{{ getTotalTurnaround() }}</strong>
+      </span>
+    </h3>
+
+    <!-- Tracker Stepper Layout -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; margin-bottom: 32px; flex-wrap: wrap; gap: 20px; padding: 0 10px;">
+      
+      <!-- Background Connecting Line -->
+      <div style="position: absolute; top: 18px; left: 5%; right: 5%; height: 4px; background: rgba(255, 255, 255, 0.1); z-index: 1;"></div>
+      
+      <!-- Step 1: Manager -->
+      <div style="flex: 1; min-width: 100px; text-align: center; z-index: 2; position: relative;">
+        <div [style.background]="invoice.created_at ? 'var(--success-color)' : 'rgba(255, 255, 255, 0.1)'" 
+             [style.border]="invoice.created_at ? '2px solid #34D399' : '2px solid rgba(255, 255, 255, 0.2)'"
+             style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #fff; font-weight: 700; box-shadow: 0 0 10px rgba(52, 211, 153, 0.2); font-size: 14px;">
+          ✓
+        </div>
+        <div style="font-weight: 700; font-size: 12px; color: #FFF; margin-bottom: 2px;">Registered</div>
+        <div style="font-size: 10px; color: var(--text-secondary); height: 12px; line-height: 12px;">Manager</div>
+        <div style="font-size: 10px; color: var(--cyan-color); font-family: monospace; margin-top: 6px; font-weight: bold; background: rgba(6,182,212,0.1); display: inline-block; padding: 2px 6px; border-radius: 4px;">
+          {{ getStageDuration(invoice.created_at, invoice.sent_to_signature_pending_at) }}
+        </div>
+      </div>
+
+      <!-- Step 2: Senior Manager -->
+      <div style="flex: 1; min-width: 100px; text-align: center; z-index: 2; position: relative;">
+        <div [style.background]="invoice.approved_by_senior_manager_at ? 'var(--success-color)' : (invoice.status === 'Signature Pending' && invoice.current_approver === 'Senior Manager IT Operations' ? 'var(--cyan-color)' : 'rgba(255, 255, 255, 0.1)')" 
+             [style.border]="invoice.approved_by_senior_manager_at ? '2px solid #34D399' : (invoice.status === 'Signature Pending' && invoice.current_approver === 'Senior Manager IT Operations' ? '2px solid #22D3EE' : '2px solid rgba(255, 255, 255, 0.2)')"
+             style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #fff; font-weight: 700; font-size: 14px;">
+          {{ invoice.approved_by_senior_manager_at ? '✓' : '1' }}
+        </div>
+        <div style="font-weight: 700; font-size: 12px; color: #FFF; margin-bottom: 2px;">Senior Manager</div>
+        <div style="font-size: 10px; color: var(--text-secondary); height: 12px; line-height: 12px;">IT Operations</div>
+        <div *ngIf="invoice.sent_to_signature_pending_at" style="font-size: 10px; color: var(--cyan-color); font-family: monospace; margin-top: 6px; font-weight: bold; background: rgba(6,182,212,0.1); display: inline-block; padding: 2px 6px; border-radius: 4px;">
+          {{ getStageDuration(invoice.sent_to_signature_pending_at, invoice.approved_by_senior_manager_at) }}
+        </div>
+      </div>
+
+      <!-- Step 3: Head of IT -->
+      <div style="flex: 1; min-width: 100px; text-align: center; z-index: 2; position: relative;">
+        <div [style.background]="invoice.approved_by_head_of_it_at ? 'var(--success-color)' : (invoice.status === 'Signature Pending' && invoice.current_approver === 'Head of IT' ? 'var(--cyan-color)' : 'rgba(255, 255, 255, 0.1)')" 
+             [style.border]="invoice.approved_by_head_of_it_at ? '2px solid #34D399' : (invoice.status === 'Signature Pending' && invoice.current_approver === 'Head of IT' ? '2px solid #22D3EE' : '2px solid rgba(255, 255, 255, 0.2)')"
+             style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #fff; font-weight: 700; font-size: 14px;">
+          {{ invoice.approved_by_head_of_it_at ? '✓' : '2' }}
+        </div>
+        <div style="font-weight: 700; font-size: 12px; color: #FFF; margin-bottom: 2px;">Head of IT</div>
+        <div style="font-size: 10px; color: var(--text-secondary); height: 12px; line-height: 12px;">IT Approvals</div>
+        <div *ngIf="invoice.approved_by_senior_manager_at" style="font-size: 10px; color: var(--cyan-color); font-family: monospace; margin-top: 6px; font-weight: bold; background: rgba(6,182,212,0.1); display: inline-block; padding: 2px 6px; border-radius: 4px;">
+          {{ getStageDuration(invoice.approved_by_senior_manager_at, invoice.approved_by_head_of_it_at) }}
+        </div>
+      </div>
+
+      <!-- Step 4: DGM Operations -->
+      <div style="flex: 1; min-width: 100px; text-align: center; z-index: 2; position: relative;">
+        <div [style.background]="invoice.approved_by_dgm_at ? 'var(--success-color)' : (invoice.status === 'Signature Pending' && invoice.current_approver === 'DGM Operations' ? 'var(--cyan-color)' : 'rgba(255, 255, 255, 0.1)')" 
+             [style.border]="invoice.approved_by_dgm_at ? '2px solid #34D399' : (invoice.status === 'Signature Pending' && invoice.current_approver === 'DGM Operations' ? '2px solid #22D3EE' : '2px solid rgba(255, 255, 255, 0.2)')"
+             style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #fff; font-weight: 700; font-size: 14px;">
+          {{ invoice.approved_by_dgm_at ? '✓' : '3' }}
+        </div>
+        <div style="font-weight: 700; font-size: 12px; color: #FFF; margin-bottom: 2px;">DGM Operations</div>
+        <div style="font-size: 10px; color: var(--text-secondary); height: 12px; line-height: 12px;">Final Signoff</div>
+        <div *ngIf="invoice.approved_by_head_of_it_at" style="font-size: 10px; color: var(--cyan-color); font-family: monospace; margin-top: 6px; font-weight: bold; background: rgba(6,182,212,0.1); display: inline-block; padding: 2px 6px; border-radius: 4px;">
+          {{ getStageDuration(invoice.approved_by_head_of_it_at, invoice.approved_by_dgm_at) }}
+        </div>
+      </div>
+
+      <!-- Step 5: Central Accounts -->
+      <div style="flex: 1; min-width: 100px; text-align: center; z-index: 2; position: relative;">
+        <div [style.background]="invoice.paid_at ? 'var(--success-color)' : (invoice.status === 'Approved' && invoice.current_approver === 'Central Accounts' ? 'var(--cyan-color)' : 'rgba(255, 255, 255, 0.1)')" 
+             [style.border]="invoice.paid_at ? '2px solid #34D399' : (invoice.status === 'Approved' && invoice.current_approver === 'Central Accounts' ? '2px solid #22D3EE' : '2px solid rgba(255, 255, 255, 0.2)')"
+             style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #fff; font-weight: 700; font-size: 14px;">
+          {{ invoice.paid_at ? '✓' : '4' }}
+        </div>
+        <div style="font-weight: 700; font-size: 12px; color: #FFF; margin-bottom: 2px;">Central Accounts</div>
+        <div style="font-size: 10px; color: var(--text-secondary); height: 12px; line-height: 12px;">Payment Process</div>
+        <div *ngIf="invoice.approved_by_dgm_at" style="font-size: 10px; color: var(--cyan-color); font-family: monospace; margin-top: 6px; font-weight: bold; background: rgba(6,182,212,0.1); display: inline-block; padding: 2px 6px; border-radius: 4px;">
+          {{ getStageDuration(invoice.approved_by_dgm_at, invoice.paid_at) }}
+        </div>
+      </div>
+
+      <!-- Step 6: Paid / Completed -->
+      <div style="flex: 1; min-width: 100px; text-align: center; z-index: 2; position: relative;">
+        <div [style.background]="invoice.status === 'Paid' ? 'var(--success-color)' : 'rgba(255, 255, 255, 0.1)'" 
+             [style.border]="invoice.status === 'Paid' ? '2px solid #34D399' : '2px solid rgba(255, 255, 255, 0.2)'"
+             style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #fff; font-weight: 700; font-size: 14px;">
+          🏁
+        </div>
+        <div style="font-weight: 700; font-size: 12px; color: #FFF; margin-bottom: 2px;">Paid</div>
+        <div style="font-size: 10px; color: var(--text-secondary); height: 12px; line-height: 12px;">Disbursed</div>
+      </div>
+
+    </div>
+
+    <!-- Action Buttons Panel inside Progression Tracker -->
+    <div style="background: rgba(0, 0, 0, 0.3); border-radius: var(--border-radius-sm); padding: 16px; border: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <span style="font-size: 13px; color: var(--text-secondary);">Current Action Required By: </span>
+        <strong style="color: var(--cyan-color); font-size: 14px; margin-left: 6px;">
+          {{ invoice.status === 'Paid' ? 'Completed' : (invoice.current_approver || 'Manager') }}
+        </strong>
+      </div>
+
+      <!-- Action Buttons -->
+      <div>
+        <!-- Pending state notice -->
+        <div *ngIf="invoice.status === 'Pending'" style="font-size: 12px; color: var(--warning-color); display: flex; align-items: center; gap: 6px;">
+          <span>⚠️</span> Upload documents below to automatically route to Senior Manager.
+        </div>
+
+        <!-- Approve: Senior Manager IT Operations -->
+        <button *ngIf="invoice.status === 'Signature Pending' && invoice.current_approver === 'Senior Manager IT Operations'"
+                type="button" class="btn btn-success" (click)="approveInvoiceWorkflow()"
+                style="box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); font-weight: 700; background: var(--success-color); border-color: var(--success-color); color: #FFF;">
+          🖋️ Approve (Senior Manager IT Operations)
+        </button>
+
+        <!-- Approve: Head of IT -->
+        <button *ngIf="invoice.status === 'Signature Pending' && invoice.current_approver === 'Head of IT'"
+                type="button" class="btn btn-success" (click)="approveInvoiceWorkflow()"
+                style="box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); font-weight: 700; background: var(--success-color); border-color: var(--success-color); color: #FFF;">
+          🖋️ Approve (Head of IT)
+        </button>
+
+        <!-- Approve: DGM Operations -->
+        <button *ngIf="invoice.status === 'Signature Pending' && invoice.current_approver === 'DGM Operations'"
+                type="button" class="btn btn-success" (click)="approveInvoiceWorkflow()"
+                style="box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); font-weight: 700; background: var(--success-color); border-color: var(--success-color); color: #FFF;">
+          🖋️ Approve & Sign off (DGM Operations)
+        </button>
+
+        <!-- Central Accounts mark as Paid -->
+        <button *ngIf="invoice.status === 'Approved' && invoice.current_approver === 'Central Accounts'"
+                type="button" class="btn" (click)="approveInvoiceWorkflow()"
+                style="box-shadow: 0 4px 12px rgba(34, 211, 238, 0.25); font-weight: 700; background: var(--cyan-color); border-color: var(--cyan-color); color: #000;">
+          💵 Disburse & Mark as Paid (Central Accounts)
+        </button>
+
+        <!-- Completed State -->
+        <div *ngIf="invoice.status === 'Paid'" style="color: var(--success-color); font-weight: 700; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+          <span>✨</span> Payment fully certified and disbursed!
+        </div>
+      </div>
+    </div>
+  </div>
+
   <form (ngSubmit)="onSubmit()" #invoiceForm="ngForm">
     <div class="form-grid">
       <!-- ITD Number -->
@@ -286,24 +440,24 @@
         </div>
       </div>
 
-      <!-- Status (Editable in both modes) -->
+      <!-- Status (Read-Only) -->
       <div>
-        <label for="status">Status <span style="color: var(--cyan-color); font-size: 12px;">(Editable)</span></label>
-        <select 
-          id="status" 
-          name="status" 
-          [(ngModel)]="invoice.status"
-          style="font-weight: 700;"
-          [class.badge-pending]="invoice.status === 'Pending'"
-          [class.badge-approved]="invoice.status === 'Approved'"
-          [class.badge-paid]="invoice.status === 'Paid'"
-          [class.badge-cancelled]="invoice.status === 'Cancelled'"
-        >
-          <option value="Pending">Pending</option>
-          <option value="Approved">Approved</option>
-          <option value="Paid">Paid</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
+        <label for="status">Status</label>
+        <div style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: var(--border-radius-sm); display: flex; align-items: center; justify-content: space-between; height: 42px;">
+          <span class="badge"
+            [class.badge-pending]="invoice.status === 'Pending'"
+            [class.badge-info]="invoice.status === 'Signature Pending'"
+            [class.badge-approved]="invoice.status === 'Approved'"
+            [class.badge-paid]="invoice.status === 'Paid'"
+            [class.badge-cancelled]="invoice.status === 'Cancelled'"
+            style="font-size: 12px; font-weight: 700; padding: 4px 10px;"
+          >
+            {{ invoice.status }}
+          </span>
+          <span *ngIf="invoice.current_approver" style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+            With: <strong style="color: var(--cyan-color);">{{ invoice.current_approver }}</strong>
+          </span>
+        </div>
       </div>
 
       <!-- Description -->
@@ -572,12 +726,13 @@
     <div class="form-actions" style="margin-top: 24px;">
       <a routerLink="/invoices" class="btn btn-secondary">Back</a>
       <button 
+        *ngIf="!isEditMode"
         type="submit" 
         class="btn btn-primary" 
         [disabled]="invoiceForm.invalid || submitting || !!poOverLimitError"
       >
         <span *ngIf="submitting" class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
-        <span>{{ submitting ? 'Saving...' : (isEditMode ? 'Update Status' : 'Create Invoice') }}</span>
+        <span>{{ submitting ? 'Saving...' : 'Create Invoice' }}</span>
       </button>
     </div>
   </form>

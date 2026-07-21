@@ -25,6 +25,13 @@ class VendorInvoiceBase(BaseModel):
     account_number: Optional[str] = None
     account_type: Optional[str] = None
     invoice_number: Optional[str] = None
+    created_at: Optional[datetime] = None
+    sent_to_signature_pending_at: Optional[datetime] = None
+    approved_by_senior_manager_at: Optional[datetime] = None
+    approved_by_head_of_it_at: Optional[datetime] = None
+    approved_by_dgm_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
+    current_approver: Optional[str] = None
 
 class CostCenterResponse(BaseModel):
     cost_center_id: int

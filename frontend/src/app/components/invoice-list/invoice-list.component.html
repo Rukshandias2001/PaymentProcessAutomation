@@ -109,21 +109,16 @@
           </td>
           <td>{{ invoice.po_number }}</td>
           <td>
-            <!-- Interactive Inline Status Dropdown -->
-            <select 
-              [ngModel]="invoice.status" 
-              (ngModelChange)="updateStatus(invoice, $event)"
-              style="padding: 4px 8px; font-size: 12px; height: auto; font-weight: 600; cursor: pointer;"
+            <span class="badge"
               [class.badge-pending]="invoice.status === 'Pending'"
+              [class.badge-info]="invoice.status === 'Signature Pending'"
               [class.badge-approved]="invoice.status === 'Approved'"
               [class.badge-paid]="invoice.status === 'Paid'"
               [class.badge-cancelled]="invoice.status === 'Cancelled'"
+              style="padding: 4px 8px; font-size: 12px; font-weight: 600;"
             >
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Paid">Paid</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
+              {{ invoice.status }}
+            </span>
           </td>
           <td>
             <div class="actions-cell">

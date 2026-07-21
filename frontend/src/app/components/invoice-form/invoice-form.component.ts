@@ -668,4 +668,52 @@ export class InvoiceFormComponent implements OnInit {
     this.exportingSubscriptionExcel = false;
     this.cdr.detectChanges();
   }
+
+  getStageDuration(startStr: string | undefined, endStr: string | undefined): string {
+    if (!startStr) return '0s';
+    const start = new Date(startStr).getTime();
+    const end = endStr ? new Date(endStr).getTime() : new Date().getTime();
+    const diffMs = Math.max(0, end - start);
+    
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) {
+      return `${diffDays}d ${diffHours % 24}h`;
+    }
+    if (diffHours > 0) {
+      return `${diffHours}h ${diffMins % 60}m`;
+    }
+    if (diffMins > 0) {
+      return `${diffMins}m ${diffSecs % 60}s`;
+    }
+    return `${diffSecs}s`;
+  }
+
+  getTotalTurnaround(): string {
+    if (!this.invoice.created_at) return '0s';
+    return this.getStageDuration(this.invoice.created_at, this.invoice.paid_at);
+  }
+
+  approveInvoiceWorkflow() {
+    const oldStatus = this.invoice.status;
+    this.paymentService.approveInvoice(this.invoice.itd_no).subscribe({
+      next: (updatedInvoice) => {
+        const newStatus = updatedInvoice.status;
+        this.triggerToast(this.invoice.itd_no, oldStatus, newStatus);
+        
+        this.invoice = {
+          ...this.invoice,
+          ...updatedInvoice
+        };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Workflow approval failed:', err);
+        alert('Failed to process approval workflow.');
+      }
+    });
+  }
 }
