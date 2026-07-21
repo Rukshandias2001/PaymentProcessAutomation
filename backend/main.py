@@ -230,6 +230,71 @@ def get_po_delivery_summary(po_number: str, db: Session = Depends(get_db)):
     }
 
 
+@app.get("/api/invoices/{itd_no}/subscription-history")
+def get_subscription_history(itd_no: str, db: Session = Depends(get_db)):
+    target_invoice = db.query(models.VendorInvoice).filter(models.VendorInvoice.itd_no == itd_no).first()
+    if not target_invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    try:
+        target_num = int(itd_no.split("-")[1])
+    except (IndexError, ValueError):
+        target_num = 0
+
+    query = db.query(models.VendorInvoice).filter(
+        models.VendorInvoice.payment_type == target_invoice.payment_type,
+        models.VendorInvoice.vendor_names == target_invoice.vendor_names,
+        models.VendorInvoice.status != "Cancelled"
+    )
+    if target_invoice.account_id is not None:
+        query = query.filter(models.VendorInvoice.account_id == target_invoice.account_id)
+        
+    all_invoices = query.all()
+    
+    history_items = []
+    for inv in all_invoices:
+        try:
+            inv_num = int(inv.itd_no.split("-")[1])
+        except (IndexError, ValueError):
+            inv_num = 0
+            
+        if inv_num <= target_num:
+            history_items.append(inv)
+            
+    def get_num(inv):
+        try:
+            return int(inv.itd_no.split("-")[1])
+        except Exception:
+            return 0
+            
+    history_items.sort(key=get_num)
+    
+    results = []
+    for inv in history_items:
+        month_str = ""
+        if inv.invoice_took_date:
+            try:
+                parts = inv.invoice_took_date.split("-")
+                if len(parts) >= 2:
+                    year = parts[0]
+                    month_num = int(parts[1])
+                    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                    if 1 <= month_num <= 12:
+                        month_str = f"{months[month_num - 1]} {year}"
+            except Exception:
+                pass
+                
+        results.append({
+            "itd_no": inv.itd_no,
+            "month": month_str,
+            "price": float(inv.price) if inv.price is not None else 0.0,
+            "date": inv.invoice_took_date or inv.invoice_sent or "",
+            "is_current": inv.itd_no == itd_no
+        })
+        
+    return results
+
+
 # ----------------- Dynamic Folder Creation Helpers -----------------
 PAYMENTS_BASE_PATH = "/Users/rukshandias/Desktop/ProcessAutomation/Payments"
 

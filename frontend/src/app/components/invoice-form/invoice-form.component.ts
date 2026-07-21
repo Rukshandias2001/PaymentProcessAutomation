@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { PaymentService, Invoice, CostCenter, Account } from '../../services/payment.service';
+import { PaymentService, Invoice, CostCenter, Account, SubscriptionHistoryItem } from '../../services/payment.service';
 import * as XLSX from 'xlsx-js-style';
 
 @Component({
@@ -32,6 +32,8 @@ export class InvoiceFormComponent implements OnInit {
   toastTimeout: any = null;
   costCenters: CostCenter[] = [];
   accounts: Account[] = [];
+  subscriptionHistory: SubscriptionHistoryItem[] = [];
+  exportingSubscriptionExcel = false;
   
   invoice: Invoice = {
     itd_no: '',
@@ -126,6 +128,9 @@ export class InvoiceFormComponent implements OnInit {
           invoice_number: data.invoice_number || ''
         };
         this.retrofitLegacyFields();
+        if (this.isNonPurchasePaymentType()) {
+          this.loadSubscriptionHistory(data.itd_no);
+        }
         this.loading = false;
         this.loadDocuments(data.itd_no || '');
         this.cdr.detectChanges();
@@ -541,5 +546,126 @@ export class InvoiceFormComponent implements OnInit {
       'Foreign Payments'
     ];
     return nonPurchases.includes(this.invoice.payment_type || '');
+  }
+
+  loadSubscriptionHistory(itdNo: string) {
+    this.paymentService.getSubscriptionHistory(itdNo).subscribe({
+      next: (history) => {
+        this.subscriptionHistory = history;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load subscription history:', err);
+      }
+    });
+  }
+
+  exportSubscriptionHistoryExcel() {
+    if (!this.subscriptionHistory || this.subscriptionHistory.length === 0) {
+      alert('No subscription history records available to export.');
+      return;
+    }
+
+    this.exportingSubscriptionExcel = true;
+    this.cdr.detectChanges();
+
+    // Map data to the exact columns: ITD Number, Respective Month, Dollar Amount, Date
+    const excelData = this.subscriptionHistory.map((inv: any) => ({
+      'ITD Number': inv.itd_no || '',
+      'Respective Month': inv.month || '',
+      'Dollar Amount': inv.price ? `$${Number(inv.price).toFixed(2)}` : '$0.00',
+      'Date': inv.date || ''
+    }));
+
+    // Build worksheet
+    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Column widths
+    worksheet['!cols'] = [
+      { wch: 18 }, // ITD Number
+      { wch: 20 }, // Respective Month
+      { wch: 18 }, // Dollar Amount
+      { wch: 16 }  // Date
+    ];
+
+    // Header Style: Deep Navy background, Bold White text, centered
+    const headerStyle = {
+      fill: { fgColor: { rgb: "1E1B4B" } }, // Dark Indigo / Navy Fill
+      font: { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "374151" } },
+        bottom: { style: "medium", color: { rgb: "6366F1" } },
+        left: { style: "thin", color: { rgb: "374151" } },
+        right: { style: "thin", color: { rgb: "374151" } }
+      }
+    };
+
+    const defaultBorder = {
+      top: { style: "thin", color: { rgb: "E5E7EB" } },
+      bottom: { style: "thin", color: { rgb: "E5E7EB" } },
+      left: { style: "thin", color: { rgb: "E5E7EB" } },
+      right: { style: "thin", color: { rgb: "E5E7EB" } }
+    };
+
+    // Highlight border / style for current row
+    const highlightedStyle = {
+      fill: { fgColor: { rgb: "CFFAFE" } }, // Cyan light highlight (#CFFAFE)
+      font: { name: "Calibri", sz: 10, bold: true, color: { rgb: "0E7490" } }, // cyan-700
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "medium", color: { rgb: "06B6D4" } },
+        bottom: { style: "medium", color: { rgb: "06B6D4" } },
+        left: { style: "medium", color: { rgb: "06B6D4" } },
+        right: { style: "medium", color: { rgb: "06B6D4" } }
+      }
+    };
+
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = worksheet[cellAddress];
+        if (!cell) continue;
+
+        if (R === 0) {
+          cell.s = headerStyle;
+        } else {
+          // Check if this row is the current payment
+          const item = this.subscriptionHistory[R - 1];
+          const isCurrent = item && item.is_current;
+
+          if (isCurrent) {
+            cell.s = {
+              ...highlightedStyle,
+              alignment: { horizontal: C === 2 ? "right" : "center", vertical: "center" }
+            };
+          } else {
+            const isEvenRow = R % 2 === 0;
+            const bgRgb = isEvenRow ? "F9FAFB" : "FFFFFF";
+            cell.s = {
+              fill: { fgColor: { rgb: bgRgb } },
+              font: { name: "Calibri", sz: 10, color: { rgb: "111827" } },
+              alignment: { horizontal: C === 2 ? "right" : "center", vertical: "center" },
+              border: defaultBorder
+            };
+          }
+        }
+      }
+    }
+
+    const cleanPaymentType = (this.invoice.payment_type || 'Subscription').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const sheetName = `Sub_History_${this.invoice.itd_no}`.substring(0, 30);
+    const workbook: XLSX.WorkBook = {
+      Sheets: { [sheetName]: worksheet },
+      SheetNames: [sheetName]
+    };
+
+    const fileName = `Subscription_History_${this.invoice.itd_no}_${cleanPaymentType}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    this.exportingSubscriptionExcel = false;
+    this.cdr.detectChanges();
   }
 }

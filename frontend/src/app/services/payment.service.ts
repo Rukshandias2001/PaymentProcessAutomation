@@ -42,6 +42,14 @@ export interface Account {
   account_type: string;
 }
 
+export interface SubscriptionHistoryItem {
+  itd_no: string;
+  month: string;
+  price: number;
+  date: string;
+  is_current: boolean;
+}
+
 export interface PaymentCertificate {
   certificate_no: string;
   itd_no: string;
@@ -175,6 +183,10 @@ export class PaymentService {
 
   getAccounts(): Observable<Account[]> {
     return this.http.get<Account[]>(`${this.apiUrl}/accounts`);
+  }
+
+  getSubscriptionHistory(itdNo: string): Observable<SubscriptionHistoryItem[]> {
+    return this.http.get<SubscriptionHistoryItem[]>(`${this.apiUrl}/invoices/${itdNo}/subscription-history`);
   }
 
   // Certificate CRUD
