@@ -10,7 +10,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'invoices', component: InvoiceListComponent },
   { path: 'invoices/new', component: InvoiceFormComponent },
-  { path: 'invoices/edit/:id', component: InvoiceFormComponent },
+  { path: 'invoices/:id', component: InvoiceFormComponent },
   { path: 'certificates', component: CertListComponent },
   { path: 'certificates/new/:itd_no', component: CertDetailComponent },  // Create screen
   { path: 'certificates/view/:id', component: CertDetailComponent },     // View & approve screen
