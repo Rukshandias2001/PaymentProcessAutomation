@@ -369,6 +369,8 @@ export class InvoiceListComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
   approveInvoiceDirectly(invoice: Invoice) {
     const oldStatus = invoice.status;
     this.paymentService.approveInvoice(invoice.itd_no).subscribe({
@@ -400,6 +402,6 @@ export class InvoiceListComponent implements OnInit {
   }
 
   getDocumentDownloadUrl(invoice: Invoice, filename: string): string {
-    return `${this.paymentService.apiUrl}/invoices/${invoice.itd_no}/documents/${filename}`;
+    return this.paymentService.getDocumentUrl(invoice.itd_no, filename);
   }
 }
